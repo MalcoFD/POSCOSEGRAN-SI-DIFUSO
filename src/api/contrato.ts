@@ -643,6 +643,27 @@ export interface components {
             /** Id Incidencia */
             id_incidencia: string | null;
         };
+        /** ActivacionDifusa */
+        ActivacionDifusa: {
+            /** Orden */
+            orden: number;
+            /** Produccion */
+            produccion: string;
+            /** Regla */
+            regla: string;
+            /** Etapa */
+            etapa: string;
+            /** Pasada */
+            pasada: number;
+            /** Grado Inf */
+            grado_inf: number;
+            /** Grado Sup */
+            grado_sup: number;
+            /** Hallazgo */
+            hallazgo: string | null;
+            /** Terminos Salida */
+            terminos_salida: string[];
+        };
         /** ActivacionEntrada */
         ActivacionEntrada: {
             /** Motivo */
@@ -732,6 +753,13 @@ export interface components {
             /** Fundamento Clima */
             fundamento_clima: string | null;
         };
+        /** AlturaSalida */
+        AlturaSalida: {
+            /** Termino */
+            termino: string;
+            /** Altura */
+            altura: number;
+        };
         /** Borrador */
         Borrador: {
             /**
@@ -809,6 +837,10 @@ export interface components {
             reglas_nuevas: string[];
             /** Reglas Retiradas */
             reglas_retiradas: string[];
+            /** Indice Antes */
+            indice_antes?: number | null;
+            /** Indice Despues */
+            indice_despues?: number | null;
         };
         /** Catalogo */
         Catalogo: {
@@ -1098,6 +1130,8 @@ export interface components {
             version_parametros: string;
             /** Version Motor */
             version_motor: string;
+            /** @description Sistema de inferencia difusa (Mamdani); null en evaluaciones nítidas. */
+            inferencia?: components["schemas"]["InferenciaDifusa"] | null;
         };
         /** EvaluacionEntrada */
         "EvaluacionEntrada-Input": {
@@ -1191,9 +1225,19 @@ export interface components {
             /** Fecha Observacion */
             fecha_observacion: string | null;
             /** Operador */
-            operador: ("GT" | "GTE" | "LT" | "LTE" | "EQ" | "NEQ" | "PRESENCIA" | "VIGENCIA") | null;
+            operador: ("GT" | "GTE" | "LT" | "LTE" | "EQ" | "NEQ" | "PRESENCIA" | "VIGENCIA" | "PERTENENCIA") | null;
             /** Umbral */
             umbral: number | boolean | string | null;
+            /**
+             * Termino
+             * @description Término lingüístico evaluado (operador PERTENENCIA).
+             */
+            termino?: string | null;
+            /**
+             * Grado
+             * @description Grado de pertenencia μ del valor observado al término.
+             */
+            grado?: number | null;
         };
         /** Explicacion */
         Explicacion: {
@@ -1236,6 +1280,13 @@ export interface components {
             version_parametros: string;
             /** Hash Base */
             hash_base: string;
+            /**
+             * Origen Decision
+             * @default NITIDO
+             * @enum {string}
+             */
+            origen_decision: "NITIDO" | "VETO" | "CORTE_ALFA" | "INDICE" | "PENDIENTES";
+            inferencia?: components["schemas"]["InferenciaDifusa"] | null;
         };
         /** FichaRegla */
         FichaRegla: {
@@ -1310,6 +1361,11 @@ export interface components {
             casos: components["schemas"]["CasoAfectado"][];
             /** Nuevas Autorizaciones */
             nuevas_autorizaciones: number;
+            /**
+             * Variacion Maxima Indice
+             * @description Distancia de Tchebychev entre los índices de severidad de ambas versiones: la mayor variación en un caso.
+             */
+            variacion_maxima_indice?: number | null;
         };
         /** Incidencia */
         Incidencia: {
@@ -1344,6 +1400,24 @@ export interface components {
             creada_en: string;
             /** Cerrada En */
             cerrada_en: string | null;
+        };
+        /** InferenciaDifusa */
+        InferenciaDifusa: {
+            /** Pertenencias */
+            pertenencias: components["schemas"]["PertenenciaDifusa"][];
+            /** Activaciones */
+            activaciones: components["schemas"]["ActivacionDifusa"][];
+            salida: components["schemas"]["SalidaDifusa"];
+            /**
+             * Origen Decision
+             * @enum {string}
+             */
+            origen_decision: "NITIDO" | "VETO" | "CORTE_ALFA" | "INDICE" | "PENDIENTES";
+            /**
+             * Borrosidad
+             * @description Borrosidad normalizada de la fuzzificación: 0 = nítida, 1 = máxima.
+             */
+            borrosidad: number | null;
         };
         /** Inicio */
         Inicio: {
@@ -1441,6 +1515,12 @@ export interface components {
              * @enum {string}
              */
             fundamento: "PUBLICADO" | "TRANSFERIDO" | "POLITICA_PROTOTIPO" | "MIXTO";
+            /**
+             * Grado Activacion
+             * @description Grado α con que se activó la regla (Modus Ponens Generalizado).
+             * @default 1
+             */
+            grado_activacion: number;
         };
         /**
          * ObservacionEntrada
@@ -1613,6 +1693,11 @@ export interface components {
             porque: string[];
             /** Antecedente */
             antecedente: string | null;
+            /**
+             * Grado
+             * @default 1
+             */
+            grado: number;
         };
         /** Perfil */
         Perfil: {
@@ -1625,6 +1710,19 @@ export interface components {
             nombre: string;
             /** Roles */
             roles: ("PRODUCTOR" | "TECNICO" | "ADMINISTRADOR" | "INGENIERO_CONOCIMIENTO")[];
+        };
+        /** PertenenciaDifusa */
+        PertenenciaDifusa: {
+            /** Variable */
+            variable: string;
+            /** Termino */
+            termino: string;
+            /** Valor */
+            valor: number | null;
+            /** Unidad */
+            unidad: string;
+            /** Grado */
+            grado: number;
         };
         /** Plan */
         Plan: {
@@ -1748,6 +1846,18 @@ export interface components {
             valor: "VERDADERO" | "FALSO" | "DESCONOCIDO" | "NO_APLICA";
             /** Faltan */
             faltan: string[];
+            /**
+             * Grado
+             * @description Grado cierto de la condición de la rama.
+             * @default 1
+             */
+            grado: number;
+            /**
+             * Corte
+             * @description Corte-α que debe alcanzar la rama.
+             * @default 1
+             */
+            corte: number;
         };
         /** Regla */
         Regla: {
@@ -1852,6 +1962,30 @@ export interface components {
             resultado: "PENDIENTE" | "CONFIRMADA" | "DESCARTADA";
             /** Evidencia */
             evidencia: string;
+        };
+        /** SalidaDifusa */
+        SalidaDifusa: {
+            /** Variable */
+            variable: string;
+            /**
+             * Metodo
+             * @constant
+             */
+            metodo: "CENTROIDE";
+            /**
+             * Alturas
+             * @description Altura de recorte de cada consecuente (implicación de Mamdani).
+             */
+            alturas: components["schemas"]["AlturaSalida"][];
+            /**
+             * Indice
+             * @description Centroide del conjunto agregado; null si el conjunto agregado es vacío.
+             */
+            indice: number | null;
+            /** Banda */
+            banda: string | null;
+            /** Decision Indice */
+            decision_indice: string | null;
         };
         /** Unidad */
         Unidad: {

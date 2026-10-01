@@ -74,7 +74,7 @@ La tabla completa por variable y escenario está en la sección 13.8 del documen
 
 ## 6. Defectos detectados y corregidos durante la verificación
 
-1. **Unión de términos contiguos.** El máximo de Zadeh creaba un valle de 0,5 en la frontera interna de "TEMPLADA o CALIDA" (24 °C) y de "CALIDA o MUY_CALIDA" (36 °C). Esto violaba el anclaje. Se usa el término fusionado de la partición, que coincide con la suma acotada.
+1. **Construcción de intervalos compuestos.** Los intervalos TEMPLADA–CALIDA (24 °C) y CALIDA–MUY_CALIDA (36 °C) usan el término fusionado de la partición para conservar el anclaje; coincide con la suma acotada en esta partición. Esa construcción no reemplaza la unión de Zadeh: `grado_union` y `alguno` siempre calculan máximo; `grado_compuesto` y `es: [..]` construyen la etiqueta de intervalo. Véase sección 13.2 de la base y la revisión del 2026-09-30.
 2. **Cobertura del dictamen.** Con dictamen y plan, 12,75 % se corregía y 13 % se autorizaba, una no monotonía. Un lote más seco que la banda dictaminada se evalúa ahora en su borde inferior.
 3. **Implicación con antecedente parcial.** R30.6 quedaba elegible a 12,55 % sin dictamen ni plan. Se hizo explícita la condición HUMEDAD_CONDICIONAL.
 
@@ -84,4 +84,4 @@ Los tres ajustes dejan intacta la equivalencia con δ = 0. Los protegen pruebas 
 
 - **Anchos δ y cortes-α.** Son política del prototipo, sin fuente publicada. Deben contrastarse con el experto (entrevista o rejilla de repertorio) y, cuando haya datos de campo, calibrarse por sensibilidad sobre casos etiquetados.
 - **Endurecimiento sin plan.** Sin plan de monitoreo, grados adversos pequeños que elevan el índice por encima de 25 terminan en corrección. Es coherente con la sección 5, pero conviene confirmar con el experto si se desea ese rigor o un corte mayor para la banda [25, 50).
-- **Verificación con PostgreSQL.** Las pruebas de persistencia, API y extremo a extremo requieren PostgreSQL y se ejecutan con `scripts/verificar.ps1`.
+- **Verificación con PostgreSQL.** Ejecutada contra una base aislada durante la revisión del 2026-09-30, junto con las pruebas en navegador. Los resultados y condiciones de reproducción están en [la revisión](../REVISION-SISTEMA-DIFUSO.md); `scripts/verificar.ps1` permite repetir los controles.

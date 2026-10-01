@@ -26,6 +26,9 @@ Regenerar solo cuando un cambio de la base sea intencional y esté revisado.
 
 from __future__ import annotations
 
+# Los casos de aceptación se importan después de añadir tests/ a sys.path.
+# ruff: noqa: E402
+
 import importlib
 import json
 import random

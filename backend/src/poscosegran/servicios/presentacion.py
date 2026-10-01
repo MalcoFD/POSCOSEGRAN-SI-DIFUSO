@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from decimal import Decimal
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
@@ -32,7 +33,9 @@ from . import observaciones as obs
 def _numero(valor: object) -> float | bool | str | None:
     if valor is None or isinstance(valor, (bool, str)):
         return valor
-    return float(valor)  
+    if isinstance(valor, (Decimal, int, float)):
+        return float(valor)
+    raise TypeError(f"valor no representable en el contrato: {type(valor).__name__}")
 
 
 def almacen(fila: Almacen) -> api.Almacen:

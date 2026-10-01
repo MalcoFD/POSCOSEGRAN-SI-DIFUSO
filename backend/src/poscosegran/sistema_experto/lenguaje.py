@@ -452,7 +452,7 @@ class Evaluador:
             self.hechos.pertenencias[(nombre_variable, termino)] = Pertenencia(
                 variable=nombre_variable, termino=termino, valor=x, unidad=variable.unidad, grado=grado
             )
-        return Grado.exacto(variable.grado_union(terminos, x)), x
+        return Grado.exacto(variable.grado_compuesto(terminos, x)), x
 
     def _op_difuso(self, nodo: Mapping[str, Any]) -> Juicio:
         nombre = nodo["difuso"]
@@ -461,7 +461,8 @@ class Evaluador:
         grado, _ = self.pertenencia(nombre, lista)
         if grado.cierto <= 0:
             return Juicio(grado)
-        return Juicio(grado, (f"{nombre} {' o '.join(lista)} (μ = {grado.cierto:.2f})",))
+        etiqueta = lista[0] if len(lista) == 1 else f"intervalo compuesto [{', '.join(lista)}]"
+        return Juicio(grado, (f"{nombre} {etiqueta} (μ = {grado.cierto:.2f})",))
 
     # --- Explicación: ¿por qué no? --------------------------------------------
 

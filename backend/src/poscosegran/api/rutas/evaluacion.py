@@ -17,7 +17,7 @@ from ...seguridad.permisos import RecursoInaccesible, exigir_acceso_unidad
 from ...servicios import auditoria, concurrencia, evaluaciones, observaciones, presentacion
 from ...servicios import conocimiento as servicio_conocimiento
 from ...sistema_experto import serializacion
-from ...sistema_experto.explicacion import explicar
+from ...sistema_experto.explicacion import Paso, RamaExplicada, explicar
 from ...servicios import vigencia as servicio_vigencia
 from .. import paginacion
 from ..dependencias import ClaveIdempotencia, IfMatch, IfNoneMatch, completar, etiquetar, reservar
@@ -307,14 +307,14 @@ def explicacion(id_evaluacion: uuid.UUID, sesion: SesionDep, identidad: Identida
         raise HTTPException(409, "la evaluación no se reproduce con su versión de la base: revise la integridad del registro")
     e = explicar(resultado, base)
 
-    def paso(p) -> api.PasoExplicacion:  
+    def paso(p: Paso) -> api.PasoExplicacion:
         return api.PasoExplicacion(
             orden=p.orden, regla=p.regla, etapa=p.etapa, pasada=p.pasada, conclusion=p.conclusion,
             solicitudes=list(p.solicitudes), porque=list(p.porque), antecedente=p.antecedente,
             grado=p.grado,
         )
 
-    def rama(r) -> api.RamaExplicada:  
+    def rama(r: RamaExplicada) -> api.RamaExplicada:
         return api.RamaExplicada(
             rama=r.rama, decision=r.decision, aplicada=r.aplicada, valor=r.valor, faltan=list(r.faltan),
             grado=r.grado, corte=r.corte,

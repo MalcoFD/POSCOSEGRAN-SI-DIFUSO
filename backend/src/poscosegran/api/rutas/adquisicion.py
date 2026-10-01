@@ -19,6 +19,7 @@ from ...db.modelos import Evaluacion, VersionConocimiento
 from ...dominio.hechos import Instantanea
 from ...esquemas import contrato as api
 from ...seguridad.dependencias import IdentidadDep, SesionDep
+from ...seguridad.identidad import Identidad
 from ...seguridad.permisos import AccesoDenegado, RecursoInaccesible
 from ...servicios import auditoria
 from ...servicios import conocimiento as servicio
@@ -30,7 +31,7 @@ enrutador = APIRouter(prefix="/api/v1/adquisicion", tags=["adquisicion"])
 EVALUACIONES_HISTORICAS = 200
 
 
-def _exigir_ingeniero(identidad) -> None:  
+def _exigir_ingeniero(identidad: Identidad) -> None:
     if not identidad.es_ingeniero_conocimiento:
         raise AccesoDenegado("se requiere el rol INGENIERO_CONOCIMIENTO")
 
@@ -51,7 +52,7 @@ def _resumen(v: VersionConocimiento) -> api.VersionConocimientoResumen:
     )
 
 
-def _parametros(base) -> list[api.Parametro]:  
+def _parametros(base: BaseConocimiento) -> list[api.Parametro]:
     return [
         api.Parametro(
             nombre=p.nombre, valor=float(p.valor), unidad=p.unidad, fundamento=p.fundamento,
@@ -82,7 +83,7 @@ def _casos_historicos(sesion: Session) -> list[tuple[str, str, Instantanea]]:
     return casos
 
 
-def _puede_activar(identidad, version: VersionConocimiento) -> bool:  
+def _puede_activar(identidad: Identidad, version: VersionConocimiento) -> bool:
     """Separación de funciones: quien propuso una versión no la activa.
 
     La excepción existe para poder recorrer el ciclo completo con una sola cuenta en
@@ -160,8 +161,8 @@ def detalle(id_version: uuid.UUID, sesion: SesionDep, identidad: IdentidadDep) -
     return api.DetalleVersion(
         version=_resumen(version),
         parametros=_parametros(base),
-        reglas=list(version.contenido["operativa"]["reglas"]),  
-        fichas=[api.FichaRegla.model_validate(f) for f in version.contenido["documental"]["reglas"]],  
+        reglas=list(base.contenido["operativa"]["reglas"]),
+        fichas=[api.FichaRegla.model_validate(f) for f in base.contenido["documental"]["reglas"]],
         cambios_respecto_origen=cambios,
     )
 

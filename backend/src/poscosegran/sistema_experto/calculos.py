@@ -184,6 +184,7 @@ class Calculadora:
                     "representativas documentadas"
                 )
                 continue
+            assert intervalo.humedad_grano is not None and intervalo.temperatura_grano is not None
             celda_tramo = tabla.seleccionar(
                 intervalo.humedad_grano,  
                 intervalo.temperatura_grano,  

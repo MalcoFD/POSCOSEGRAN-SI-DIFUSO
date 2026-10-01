@@ -35,7 +35,7 @@ backend/.venv/Scripts/python.exe backend/scripts/preparar_local.py
 
 Si usas uv: `uv venv backend/.venv --python 3.13` y `uv pip install --python backend/.venv/Scripts/python.exe -e "backend[dev]"`. No recrees el entorno si ya existe.
 
-El preparador aplica migraciones, carga la base 2.0 y crea cinco usuarios de desarrollo: `productor`, `tecnico`, `administrador`, `ingeniero` y `revisor` (los dos últimos con el rol de ingeniería del conocimiento). Para probar el inicio de sesión usa `testeo` como usuario y contraseña; corresponde al perfil PRODUCTOR. También puedes usar los nombres de usuario de los otros roles con esa misma contraseña. Esta credencial se limita al entorno local.
+El preparador aplica migraciones, carga la base difusa 3.1 y crea cinco usuarios de desarrollo: `productor`, `tecnico`, `administrador`, `ingeniero` y `revisor` (los dos últimos con el rol de ingeniería del conocimiento). Para probar el inicio de sesión usa `testeo` como usuario y contraseña; corresponde al perfil PRODUCTOR. También puedes usar los nombres de usuario de los otros roles con esa misma contraseña. Esta credencial se limita al entorno local.
 
 En dos terminales:
 
@@ -68,6 +68,9 @@ Reproduce los gates del workflow en el mismo orden y se detiene en el primero qu
 - [Especificación integrada de las reglas](knowledge/POSCOSEGRAN_52_reglas_base_conocimiento_integrada.md)
 - [Catálogo de reglas](knowledge/catalogo.yaml)
 - [Casos de referencia](knowledge/casos_referencia.json)
+- [Revisión contra las diapositivas y comprobación de R01–R52](REVISION-SISTEMA-DIFUSO.md)
+- [Plan de despliegue para la presentación, incluido AWS](PLAN-DESPLIEGUE.md)
+- [Cambios y motivos de la revisión](changelog.md)
 - La API interactiva está disponible en `/documentacion` al iniciar el backend.
 
 Supabase todavía no está configurado. El acceso local permite recorrer la aplicación sin ese servicio y está bloqueado en producción. Este prototipo orienta sobre almacenamiento; no certifica inocuidad ni ausencia de micotoxinas.

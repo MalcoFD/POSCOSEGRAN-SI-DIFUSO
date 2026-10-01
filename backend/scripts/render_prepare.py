@@ -13,7 +13,7 @@ from pathlib import Path
 
 import sqlalchemy as sa
 
-from poscosegran.config import obtener_configuracion
+from poscosegran.config import Configuracion, obtener_configuracion
 from poscosegran.db.modelos import VersionConocimiento
 
 BACKEND = Path(__file__).resolve().parents[1]
@@ -22,7 +22,10 @@ BACKEND = Path(__file__).resolve().parents[1]
 def main() -> int:
     configuracion = obtener_configuracion()
     entorno = os.environ.copy()
-    entorno["POSCOSEGRAN_BD_URL_MIGRACIONES"] = configuracion.bd_url_app
+    url_migraciones = str(Configuracion.normalizar_url_postgres(
+        entorno.get("POSCOSEGRAN_BD_URL_MIGRACIONES") or configuracion.bd_url_app
+    ))
+    entorno["POSCOSEGRAN_BD_URL_MIGRACIONES"] = url_migraciones
     subprocess.run(
         [sys.executable, "-m", "alembic", "upgrade", "head"],
         cwd=BACKEND,
@@ -30,7 +33,7 @@ def main() -> int:
         check=True,
     )
 
-    motor = sa.create_engine(configuracion.bd_url_app, pool_pre_ping=True)
+    motor = sa.create_engine(url_migraciones, pool_pre_ping=True)
     try:
         with motor.connect() as conexion:
             hay_version_activa = conexion.scalar(
@@ -39,10 +42,15 @@ def main() -> int:
                 .limit(1)
             )
         if hay_version_activa is None:
-            from poscosegran.conocimiento.cargar import cargar
-
             carpeta = Path(os.environ.get("POSCOSEGRAN_KNOWLEDGE", "/knowledge"))
-            print(cargar(carpeta, activar=True, notas="Carga inicial de Render"))
+            # El cargador usa la conexión de aplicación: solo este proceso de
+            # preparación recibe privilegios de migración para la semilla.
+            entorno["POSCOSEGRAN_BD_URL_APP"] = url_migraciones
+            subprocess.run(
+                [sys.executable, "-m", "poscosegran.conocimiento.cargar", str(carpeta),
+                 "--activar", "--notas", "Carga inicial de despliegue"],
+                cwd=BACKEND, env=entorno, check=True,
+            )
         else:
             print("Base de conocimiento activa encontrada; se conserva sin cambios.")
     finally:

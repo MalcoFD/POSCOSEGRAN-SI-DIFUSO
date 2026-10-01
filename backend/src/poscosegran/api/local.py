@@ -49,8 +49,8 @@ def sesion_local(entrada: AccesoLocal, request: Request) -> dict[str, str | int]
     ):
         raise HTTPException(401, "Credenciales incorrectas")
     with unidad_de_trabajo() as db:
-        usuario = db.get(Usuario, identificador)
-        if usuario is None or not usuario.activo:
+        cuenta = db.get(Usuario, identificador)
+        if cuenta is None or not cuenta.activo:
             raise HTTPException(403, "Ejecute la preparación del entorno local")
     ahora = datetime.now(UTC)
     vencimiento = ahora + timedelta(hours=8)

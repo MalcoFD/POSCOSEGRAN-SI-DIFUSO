@@ -34,4 +34,6 @@ test-results/
 playwright-report/
 *.dump
 docs/superpowers
-docs/
+docs/*
+!docs/openapi.json
+/tmp/

@@ -252,7 +252,7 @@ class UnionParticion:
     def describir(self) -> str:
         izquierda = TerminoParticion(self.cortes, self.desde).describir()
         derecha = TerminoParticion(self.cortes, self.hasta).describir()
-        return izquierda if self.desde == self.hasta else f"{izquierda} ∪ {derecha} (fusionados)"
+        return izquierda if self.desde == self.hasta else f"intervalo fusionado({izquierda}; {derecha})"
 
 
 # ---------------------------------------------------------------------------
@@ -280,11 +280,16 @@ class VariableLinguistica:
         return self.terminos[termino].grado(x)
 
     def grado_union(self, terminos: Sequence[str], x: float) -> float:
-        """Pertenencia a una etiqueta compuesta "T1 o T2 o ...".
+        """Unión de Zadeh: μ(A ∪ B)(x) = máx(μA(x), μB(x))."""
+        return max((self.terminos[t].grado(x) for t in terminos), default=0.0)
+
+    def grado_compuesto(self, terminos: Sequence[str], x: float) -> float:
+        """Etiqueta de intervalo sobre una partición más gruesa.
 
         Los términos contiguos de una misma partición se fusionan (UnionParticion);
         los bloques no contiguos, y los términos de forma libre, se unen por el
-        máximo de Zadeh.
+        máximo de Zadeh. Esta construcción de un término no es la disyunción:
+        para expresar T1 O T2 en una regla se utiliza el operador `alguno`.
         """
         indices: list[int] = []
         libres: list[str] = []
@@ -447,15 +452,19 @@ def _numero(valor: Any, parametros: Mapping[str, Any], ruta: str, errores: list[
         if nombre not in parametros:
             errores.append(f"{ruta}: parámetro desconocido '{nombre}'")
             return None
-        return float(parametros[nombre].valor)
+        valor = parametros[nombre].valor
     if isinstance(valor, bool) or valor is None:
         errores.append(f"{ruta}: se esperaba un número o {{param: ...}}")
         return None
     try:
-        return float(Decimal(str(valor)))
+        numero = float(Decimal(str(valor)))
     except (ArithmeticError, ValueError):
         errores.append(f"{ruta}: número no válido '{valor}'")
         return None
+    if not math.isfinite(numero):
+        errores.append(f"{ruta}: el número debe ser finito")
+        return None
+    return numero
 
 
 def _funcion(forma: Mapping[str, Any], parametros: Mapping[str, Any], ruta: str, errores: list[str]) -> FuncionPertenencia | None:
@@ -528,7 +537,7 @@ def _normalizada(funcion: FuncionPertenencia, universo: tuple[float, float], pun
     if isinstance(funcion, TerminoParticion):
         candidatos += [c.umbral for c in funcion.cortes] + [c.izquierda for c in funcion.cortes]
         candidatos += [c.derecha for c in funcion.cortes]
-    return max(funcion.grado(x) for x in candidatos) >= 1.0
+    return max(funcion.grado(x) for x in candidatos if inicio <= x <= fin) >= 1.0
 
 
 def _variable(
@@ -653,9 +662,22 @@ def construir_modelo(
     else:
         nombre_salida = str(datos_salida.get("nombre", "severidad"))
         universo_salida = datos_salida.get("universo", [0, 100])
-        puntos = int(config.get("puntos", 1001))
-        if puntos < 101:
-            errores.append("inferencia_difusa.puntos: se requieren al menos 101 puntos")
+        rango: tuple[float, float] | None = None
+        if not isinstance(universo_salida, list) or len(universo_salida) != 2:
+            errores.append("inferencia_difusa.variable_salida.universo: requiere [mínimo, máximo]")
+        else:
+            inicio = _numero(universo_salida[0], parametros, "variable_salida.universo[0]", errores)
+            fin = _numero(universo_salida[1], parametros, "variable_salida.universo[1]", errores)
+            if inicio is not None and fin is not None and inicio < fin:
+                rango = (inicio, fin)
+            else:
+                errores.append("inferencia_difusa.variable_salida.universo: debe ser finito y creciente")
+        puntos_datos = config.get("puntos", 1001)
+        puntos = 1001
+        if type(puntos_datos) is not int or not 101 <= puntos_datos <= 10001:
+            errores.append("inferencia_difusa.puntos: requiere un entero entre 101 y 10001")
+        else:
+            puntos = puntos_datos
         terminos: dict[str, FuncionPertenencia] = {}
         for termino, forma in dict(datos_salida.get("terminos", {})).items():
             funcion = _funcion(forma, parametros, f"inferencia_difusa.variable_salida.{termino}", errores)
@@ -663,12 +685,11 @@ def construir_modelo(
                 terminos[str(termino)] = funcion
         if not terminos:
             errores.append("inferencia_difusa.variable_salida: requiere términos")
-        else:
-            rango = (float(universo_salida[0]), float(universo_salida[1]))
+        elif rango is not None:
             for termino, funcion in terminos.items():
                 if not _normalizada(funcion, rango):
                     errores.append(f"inferencia_difusa.variable_salida.{termino}: no es normalizado")
-            salida = VariableSalida.crear(nombre_salida, rango, terminos, max(puntos, 101))
+            salida = VariableSalida.crear(nombre_salida, rango, terminos, puntos)
 
     consecuentes = {str(k): str(v) for k, v in dict(config.get("consecuente_por_solicitud", {})).items()}
     for solicitud, termino in consecuentes.items():

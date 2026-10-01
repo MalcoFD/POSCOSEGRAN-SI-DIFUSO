@@ -26,6 +26,7 @@ from ...db.modelos import (
 from ...esquemas import contrato as api
 from ...seguridad.dependencias import IdentidadDep, SesionDep
 from ...seguridad.permisos import (
+    AmbitoUnidad,
     RecursoInaccesible,
     exigir_acceso_incidencia,
     exigir_acceso_unidad,
@@ -53,7 +54,9 @@ REQUISITOS_CONTROL: dict[str, tuple[str, ...]] = {
 }
 
 
-def _revisiones(sesion: SesionDep, identidad: IdentidadDep, id_unidad: uuid.UUID, entrada: api.Revisiones):  
+def _revisiones(
+    sesion: SesionDep, identidad: IdentidadDep, id_unidad: uuid.UUID, entrada: api.Revisiones,
+) -> AmbitoUnidad:
     ambito = exigir_acceso_unidad(sesion, identidad, id_unidad, escritura=True)
     concurrencia.exigir_revisiones_unidad(
         revision_unidad_vigente=ambito.revision_unidad,

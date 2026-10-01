@@ -678,9 +678,12 @@ def construir(operativa: Mapping[str, Any], documental: Mapping[str, Any]) -> Ba
     parametros: dict[str, Parametro] = {}
     for nombre, datos in operativa["parametros"].items():
         try:
+            numero = Decimal(str(datos["valor"]))
+            if not numero.is_finite():
+                raise ValueError("se requiere un número finito")
             parametros[nombre] = Parametro(
                 nombre=nombre,
-                valor=Decimal(str(datos["valor"])),
+                valor=numero,
                 unidad=str(datos.get("unidad", "")),
                 fundamento=str(datos.get("fundamento", "POLITICA_PROTOTIPO")),
                 fuentes=tuple(datos.get("fuentes", ())),
@@ -691,6 +694,9 @@ def construir(operativa: Mapping[str, Any], documental: Mapping[str, Any]) -> Ba
             continue
         if parametros[nombre].fundamento not in FUNDAMENTOS:
             errores.append(f"parámetro '{nombre}': fundamento desconocido")
+
+    if errores:
+        raise BaseInvalida(errores)
 
     for i, restriccion in enumerate(operativa.get("restricciones", [])):
         motivo = restriccion.get("motivo", "restricción de integridad")

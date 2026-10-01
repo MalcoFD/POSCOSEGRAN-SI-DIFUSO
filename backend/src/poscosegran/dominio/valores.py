@@ -251,7 +251,10 @@ class Evidencia:
     grado: float | None = None
 
 
-def evidencia(dato: Dato, operador: str | None = None, umbral: object = None) -> Evidencia:
+def evidencia(
+    dato: Dato, operador: str | None = None,
+    umbral: Decimal | bool | str | datetime | None = None,
+) -> Evidencia:
     return Evidencia(
         campo=dato.campo,
         valor_observado=dato.valor,

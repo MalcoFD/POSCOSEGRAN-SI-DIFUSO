@@ -650,7 +650,9 @@ Cada umbral publicado es el **ancla** de su variable. La rampa de transición, d
 
 Ejemplo de caracterización: CONDICIONAL = trap(12,5; 13; 13,5; 14). Con δ = 0 los términos degeneran en conjuntos nítidos y cada corte respeta el operador original (≤ o <).
 
-Una etiqueta compuesta de términos contiguos, como "TEMPLADA o CALIDA", designa el término de la partición más gruesa que resulta de quitar el corte interno. Su función es la suma acotada de los términos, que en una partición de Ruspini coincide con el término fusionado. El máximo de Zadeh formaría un valle de 0,5 en la frontera interna: a 24 °C, "entre 15 y 35 °C" valdría 0,5 cuando la condición nítida vale 1, lo que violaría el anclaje. Los bloques no contiguos sí se unen por el máximo.
+Una etiqueta compuesta de términos contiguos, como el **intervalo TEMPLADA–CALIDA**, designa el término de la partición más gruesa que resulta de quitar el corte interno. Su función coincide con la suma acotada de los términos en esta partición de Ruspini. A 24 °C vale 1 porque representa el intervalo completo entre 15 y 35 °C, con sus rampas exteriores. Los bloques no contiguos se combinan por máximo.
+
+**Esto no es la unión de Zadeh ni el operador lógico O.** La unión ordinaria siempre es `max(μA, μB)`: a 24 °C, TEMPLADA O CALIDA vale 0,5. En el lenguaje de reglas, `es: [TEMPLADA, CALIDA]` construye el intervalo compuesto para conservar el anclaje original; una disyunción se escribe como `alguno: [{difuso: temperatura_grano_aplicable, es: TEMPLADA}, {difuso: temperatura_grano_aplicable, es: CALIDA}]`. El motor distingue `grado_compuesto` de `grado_union`. Las menciones abreviadas "ES FRIA o TEMPLADA", "ES CALIDA o MUY_CALIDA" y "ES TEMPLADA o CALIDA" en las fichas de R06, R08 y R16 deben interpretarse como esos intervalos compuestos; la conectiva entre condiciones separadas sigue siendo máximo.
 
 Los anchos δ son **política del prototipo**, sin fuente publicada, y deben validarse con expertos y datos de campo. Son parámetros de la base, así que el módulo de adquisición puede proponer y medir cambios en ellos.
 
@@ -773,7 +775,7 @@ Las pruebas son `tests/test_difuso.py`, `tests/test_logica_intervalos.py` y `tes
 
 La verificación de la versión 3.1 detectó tres interacciones entre la semántica difusa y reglas escritas para la lógica nítida. Las tres se corrigieron sin alterar el comportamiento nítido, lo que confirma la prueba de 13.9.
 
-1. **Unión de términos contiguos.** El máximo de Zadeh dejaba un valle de 0,5 en la frontera interna de "TEMPLADA o CALIDA". Se sustituyó por el término fusionado de la partición (sección 13.2).
+1. **Construcción de intervalos compuestos.** Para conservar el anclaje de R06, R08 y R16 se construye el término fusionado de la partición (sección 13.2). La unión de Zadeh y la disyunción lógica mantienen el máximo; no deben confundirse con esa construcción.
 2. **Cobertura del dictamen.** Un dictamen para la banda [13, 14] no cubría un lote más seco pero parcialmente condicional (12,75 %). Con dictamen y plan se corregía a 12,75 % y se autorizaba a 13 %, una no monotonía. Ahora un lote más seco que la banda dictaminada se evalúa en su borde inferior.
 3. **Implicación con antecedente parcial.** `rama_condicional_admisible` es una implicación. Con antecedente 0,1 valía máx(0,9; requisitos) y dejaba elegible R30.6 sin dictamen ni plan. R30.6 exige ahora de forma explícita HUMEDAD_CONDICIONAL, lo que en lógica nítida es equivalente.
 

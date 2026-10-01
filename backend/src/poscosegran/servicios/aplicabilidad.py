@@ -1,14 +1,14 @@
 """Comprueba NO_APLICA con hechos de contexto; el motivo por sí solo no basta."""
 from dataclasses import replace
 
-from ..dominio.valores import Dato, EstadoDato, F, V
+from ..dominio.valores import Dato, EstadoDato, F, Tri, V
 
 
 def comprobar(datos: dict[str, Dato], modalidad: str | None, fase: str | None) -> dict[str, Dato]:
     salida = dict(datos)
     hermetico = modalidad == "HERMETICO"
     no_hermetico = modalidad == "NO_HERMETICO"
-    def booleano(campo: str):  
+    def booleano(campo: str) -> Tri:
         return datos.get(campo, Dato(campo)).booleano
     for campo, dato in datos.items():
         if not dato.no_aplica:

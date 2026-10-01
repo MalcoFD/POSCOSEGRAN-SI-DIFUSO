@@ -40,6 +40,8 @@ export default function Resultado() {
       {e.motivos.length > 4 && <p className="muted">Y {e.motivos.length - 4} motivos más en el fundamento técnico.</p>}
     </Panel>
 
+    {e.inferencia && <Inferencia modelo={e.inferencia} />}
+
     {/* 3. Acciones */}
     <Panel title="Acciones requeridas">{e.acciones_requeridas.length ? e.acciones_requeridas.map((a, i) => <div className="row" key={i}><p>{a.descripcion}<small>Responsable: {nombre(a.responsable_requerido)}</small></p></div>) : <p>No se requieren acciones correctivas adicionales.</p>}</Panel>
 
@@ -57,7 +59,7 @@ export default function Resultado() {
       <div className="stack">
         {x && <Explicado x={x} />}
         <h3>Motivos, evidencias y fuentes</h3>
-        {e.motivos.map(m => <details key={m.id} className="reason"><summary><span className="badge">{m.regla}</span> {m.mensaje}</summary><p>Fundamento: {nombre(m.fundamento)}</p>{m.evidencias.map((ev, i) => <p key={i}>{etiqueta(ev.campo)}: {String(ev.valor_observado ?? 'Desconocido')} {ev.unidad} {ev.operador && `· ${ev.operador} ${ev.umbral ?? ''}`} · {fecha(ev.fecha_observacion)}</p>)}{m.fuentes.map((f, i) => <div key={i}><strong>{f.id_fuente}</strong> {f.localizador}<Source text={catalogo.data?.fuentes.find(s => s.id === f.id_fuente)?.referencia_markdown || 'Fuente disponible en la base de conocimiento'} /></div>)}</details>)}
+        {e.motivos.map(m => <details key={m.id} className="reason"><summary><span className="badge">{m.regla}</span> {m.mensaje}</summary><p>Fundamento: {nombre(m.fundamento)} · Activación α = {m.grado_activacion.toFixed(2)}</p>{m.evidencias.map((ev, i) => <p key={i}>{etiqueta(ev.campo)}: {String(ev.valor_observado ?? 'Desconocido')} {ev.unidad} {ev.operador && `· ${ev.operador} ${ev.umbral ?? ''}`}{ev.termino && ` · ${ev.termino} · μ = ${ev.grado?.toFixed(2) ?? '—'}`} · {fecha(ev.fecha_observacion)}</p>)}{m.fuentes.map((f, i) => <div key={i}><strong>{f.id_fuente}</strong> {f.localizador}<Source text={catalogo.data?.fuentes.find(s => s.id === f.id_fuente)?.referencia_markdown || 'Fuente disponible en la base de conocimiento'} /></div>)}</details>)}
         <p>Reglas activadas: {e.reglas_activadas.join(', ') || 'Sin activaciones diagnósticas'}</p>
         <h3>Tiempo de almacenamiento</h3>
         <div className="metrics">{[['Vida consumida', e.calculos_tiempo.vida_consumida], ['Vida proyectada', e.calculos_tiempo.vida_proyectada], ['Referencia actual (días)', e.calculos_tiempo.tiempo_referencia_actual]].map(([label, value]) => <div key={String(label)}><span>{label}</span><strong>{value === null ? 'No disponible' : value}</strong></div>)}</div>
@@ -72,6 +74,31 @@ export default function Resultado() {
   </div>
 }
 
+function Inferencia({ modelo }: { modelo: Schema['InferenciaDifusa'] }) {
+  const { salida } = modelo
+  return <Panel title="Inferencia difusa · Mamdani">
+    <p>El índice resume las condiciones de almacenamiento. Los grados expresan pertenencia a etiquetas; no son probabilidades ni porcentajes de inocuidad.</p>
+    <div className="metrics">
+      <div><span>Índice de severidad · {nombre(salida.metodo)}</span><strong>{salida.indice === null ? 'Sin salida difusa' : `${salida.indice.toFixed(1)} / 100`}</strong></div>
+      <div><span>Origen de la decisión final</span><strong>{nombre(modelo.origen_decision)}</strong></div>
+      <div><span>Borrosidad de las pertenencias evaluadas</span><strong>{modelo.borrosidad === null ? 'Sin datos' : modelo.borrosidad.toFixed(3)}</strong></div>
+    </div>
+    {salida.decision_indice && <p>Orientación del índice: {decision(salida.decision_indice)}. La decisión final también aplica las prioridades de seguridad y los datos exigibles.</p>}
+    <details><summary>Pertenencias de las mediciones (μ)</summary>
+      <div className="table-scroll"><table><thead><tr><th>Variable</th><th>Lectura</th><th>Término</th><th>Grado μ</th></tr></thead>
+        <tbody>{modelo.pertenencias.map(p => <tr key={`${p.variable}:${p.termino}`}><td>{etiqueta(p.variable)}</td><td>{p.valor ?? 'Sin dato'} {p.unidad}</td><td>{nombre(p.termino)}</td><td>{p.grado.toFixed(3)}</td></tr>)}</tbody>
+      </table></div>
+      <p className="muted">Un dato desconocido no equivale a pertenencia cero ni a una condición favorable; se revisa en Datos pendientes.</p>
+    </details>
+    <details><summary>Activación de reglas y recorte de salida (α)</summary>
+      <div className="table-scroll"><table><thead><tr><th>Producción</th><th>Activación [inf, sup]</th><th>Consecuentes</th></tr></thead>
+        <tbody>{modelo.activaciones.map(a => <tr key={a.orden}><td>{a.produccion}</td><td>[{a.grado_inf.toFixed(3)}, {a.grado_sup.toFixed(3)}]</td><td>{a.terminos_salida.join(', ') || 'Hecho o acción auxiliar'}</td></tr>)}</tbody>
+      </table></div>
+      <p>Agregación por máximo: {salida.alturas.map(a => `${a.termino} = ${a.altura.toFixed(3)}`).join(' · ') || 'Conjunto vacío'}.</p>
+    </details>
+  </Panel>
+}
+
 /** Módulo de explicación: ¿cómo?, ¿por qué no? y hechos del caso. */
 function Explicado({ x }: { x: Explicacion }) {
   const inferidos = new Set(x.cadena.map(p => p.conclusion).filter(Boolean))
@@ -81,8 +108,8 @@ function Explicado({ x }: { x: Explicacion }) {
       {x.cadena.map(p => <li key={p.orden}><strong>{p.regla}</strong>{p.conclusion && <> concluyó <span className="badge">{p.conclusion}</span></>}{p.solicitudes.length > 0 && <> y solicitó {p.solicitudes.map(nombre).join(', ')}</>}
         <small>Porque: {p.porque.map(s => inferidos.has(s) ? s : etiqueta(s)).join('; ') || 'condición cumplida'}</small>
         {p.antecedente && <small>Regla: {p.antecedente}</small>}
-        <small>Etapa {p.etapa}, pasada {p.pasada}</small></li>)}
-      <li className="decision-final"><strong>{x.rama}</strong> → {x.etiqueta}<small>Primera rama de R30 que se cumple, en orden de prioridad.</small></li>
+        <small>Activación α = {p.grado.toFixed(3)} · Etapa {p.etapa}, pasada {p.pasada}</small></li>)}
+      <li className="decision-final"><strong>{x.rama}</strong> → {x.etiqueta}<small>{x.origen_decision === 'INDICE' ? 'El centroide endureció la decisión de R30.' : 'Primera rama de R30 que alcanza su corte α, en orden de prioridad.'}</small></li>
     </ol> : <p>La decisión no depende de ninguna regla diagnóstica: {x.resumen}</p>}
 
     {x.por_que_no.length > 0 && <>
@@ -92,8 +119,8 @@ function Explicado({ x }: { x: Explicacion }) {
     </>}
 
     <details><summary>Orden de prioridad de R30</summary>
-      <div className="table-scroll"><table><thead><tr><th>Rama</th><th>Decisión</th><th>Condición</th></tr></thead>
-        <tbody>{x.ramas.map(r => <tr key={r.rama}><td>{r.rama}{r.aplicada ? ' ✓' : ''}</td><td>{decision(r.decision)}</td><td>{nombre(r.valor)}</td></tr>)}</tbody></table></div>
+      <div className="table-scroll"><table><thead><tr><th>Rama</th><th>Decisión</th><th>Condición</th><th>Grado</th><th>Corte α</th></tr></thead>
+        <tbody>{x.ramas.map(r => <tr key={r.rama}><td>{r.rama}{r.aplicada ? ' ✓' : ''}</td><td>{decision(r.decision)}</td><td>{nombre(r.valor)}</td><td>{r.grado.toFixed(3)}</td><td>{r.corte.toFixed(3)}</td></tr>)}</tbody></table></div>
     </details>
 
     <details><summary>Hechos del caso ({x.hechos_iniciales.length} iniciales · {x.hechos_inferidos.length} inferidos)</summary>

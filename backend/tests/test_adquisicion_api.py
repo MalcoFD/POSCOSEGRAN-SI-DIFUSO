@@ -22,7 +22,10 @@ _contador = itertools.count(1)
 
 def _propuesta_unica() -> tuple[str, float]:
     n = next(_contador)
-    return f"9.{n}.{uuid.uuid4().hex[:6]}", round(13.05 + n * 0.01, 2)
+    # La banda CONDICIONAL debe contener la rampa de 0,5 % y conservar
+    # humedad_base_max (13 %) < humedad_admision_max. La fixture nítida
+    # de 13,06 % invertía esa rampa y ya no era una propuesta válida.
+    return f"9.{n}.{uuid.uuid4().hex[:6]}", round(14.05 + n * 0.01, 2)
 
 
 def _proponer(client, headers, *, rol="INGENIERO", guardar=False, motivo=MOTIVO, **extra):

@@ -34,6 +34,13 @@ def _p(valor: str | None) -> datetime | None:
     return datetime.fromisoformat(valor) if valor else None
 
 
+def _fecha_requerida(valor: str | None) -> datetime:
+    fecha = _p(valor)
+    if fecha is None:
+        raise ValueError("falta una fecha obligatoria en los hechos iniciales")
+    return fecha
+
+
 def _d(valor: Decimal | None) -> str | None:
     return str(valor) if valor is not None else None
 
@@ -144,7 +151,7 @@ def desde_json(datos: dict[str, Any]) -> Instantanea:
     plan = datos["plan"]
     dictamen = datos.get("dictamen")
     return Instantanea(
-        fecha_evaluacion=_p(datos["fecha_evaluacion"]),  
+        fecha_evaluacion=_fecha_requerida(datos["fecha_evaluacion"]),
         fase=Fase(datos["fase"]) if datos.get("fase") else None,
         tipo_almacenamiento=Modalidad(datos["tipo_almacenamiento"]) if datos.get("tipo_almacenamiento") else None,
         clima_calido=Tri(datos["clima_calido"]),
@@ -170,8 +177,8 @@ def desde_json(datos: dict[str, Any]) -> Instantanea:
             evidencia_vida_previa=datos["historial"].get("evidencia_vida_previa"),
             intervalos=tuple(
                 Intervalo(
-                    inicio=_p(i["inicio"]),  
-                    fin=_p(i["fin"]),  
+                    inicio=_fecha_requerida(i["inicio"]),
+                    fin=_fecha_requerida(i["fin"]),
                     humedad_grano=_n(i.get("humedad_grano")),
                     temperatura_grano=_n(i.get("temperatura_grano")),
                     metodo=i.get("metodo"),
@@ -200,7 +207,7 @@ def desde_json(datos: dict[str, Any]) -> Instantanea:
             humedad_min=Decimal(dictamen["humedad_min"]),
             humedad_max=Decimal(dictamen["humedad_max"]),
             plazo_maximo_dias=int(dictamen["plazo_maximo_dias"]),
-            vence_en=_p(dictamen["vence_en"]),  
+            vence_en=_fecha_requerida(dictamen["vence_en"]),
             vigente=bool(dictamen["vigente"]),
         ),
         episodios=tuple(
