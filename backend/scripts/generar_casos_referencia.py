@@ -15,19 +15,10 @@ Las variaciones se verificaron, antes de congelarse, contra el motor anterior co
 reglas en código: 48 000 casos sin diferencias (ver docs/ARQUITECTURA_SE.md).
 
 Uso:  python scripts/generar_casos_referencia.py  (requiere pytest instalado)
-      python scripts/generar_casos_referencia.py --reevaluar [archivo]
-        conserva exactamente los mismos casos (por defecto, los de
-        knowledge/casos_referencia.json) y solo recalcula lo esperado con la
-        base vigente. Es la forma de congelar el impacto de un cambio revisado sin
-        alterar el conjunto de casos; así se hizo al pasar a la base difusa 3.1,
-        partiendo de knowledge/casos_referencia_nitida.json (base nítida 2.0).
 Regenerar solo cuando un cambio de la base sea intencional y esté revisado.
 """
 
 from __future__ import annotations
-
-# Los casos de aceptación se importan después de añadir tests/ a sys.path.
-# ruff: noqa: E402
 
 import importlib
 import json
@@ -41,15 +32,15 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(RAIZ / "src"), str(RAIZ / "tests")]
 
-from casos.base import AHORA, base, bul, con, desconocido, fec, num, txt  
-from casos.test_aceptacion import dictamen_vigente, hermetico, plan_reforzado  
+from casos.base import AHORA, base, bul, con, desconocido, fec, num, txt  # noqa: E402
+from casos.test_aceptacion import dictamen_vigente, hermetico, plan_reforzado  # noqa: E402
 
-from poscosegran.dominio.hechos import (  
+from poscosegran.dominio.hechos import (  # noqa: E402
     Controles, Episodio, Fase, Historial, Intervalo, Modalidad, Plan, ResultadoRevision,
 )
-from poscosegran.dominio.motor import evaluar  
-from poscosegran.dominio.valores import D, Dato, EstadoDato, F, V  
-from poscosegran.sistema_experto import base_conocimiento, serializacion  
+from poscosegran.dominio.motor import evaluar  # noqa: E402
+from poscosegran.dominio.valores import D, Dato, EstadoDato, F, V  # noqa: E402
+from poscosegran.inferencia import base_conocimiento, serializacion  # noqa: E402
 
 SUAVE_B, SUAVE_N = 8, 7
 rnd = random.Random(20260923)
@@ -150,49 +141,13 @@ def dirigido(i):
 
 def esperado(inst) -> dict:
     r = evaluar(inst)
-    salida = {
+    return {
         "decision": r.decision_final,
         "rama": r.rama_r30,
         "reglas": sorted(r.reglas_activadas),
         "motivos": sorted(m.id for m in r.motivos),
         "pendientes": sorted({p.campo for p in r.datos_pendientes}),
     }
-    if r.inferencia is not None:
-        salida["indice"] = r.inferencia.salida.indice
-    return salida
-
-
-def _escribir(base_activa, plantilla: dict, casos: list[dict]) -> Path:
-    destino = base_conocimiento.ruta_por_defecto() / "casos_referencia.json"
-    destino.write_text(
-        json.dumps(
-            {
-                "version_base": base_activa.version_base,
-                "version_parametros": base_activa.version_parametros,
-                "hash_base": base_activa.hash,
-                "plantilla_datos": plantilla,
-                "casos": casos,
-            },
-            ensure_ascii=False,
-            separators=(",", ":"),
-        ),
-        encoding="utf-8",
-    )
-    return destino
-
-
-def reevaluar(origen: Path) -> None:
-    base_activa = base_conocimiento.cargar()
-    contenido = json.loads(origen.read_text(encoding="utf-8"))
-    # Por posición: una misma prueba puede aportar varias instantáneas con el mismo id.
-    instantaneas = [inst for _, inst, _ in serializacion.cargar_casos(contenido)]
-    casos = [dict(caso, esperado=esperado(inst)) for caso, inst in zip(contenido["casos"], instantaneas)]
-    destino = _escribir(base_activa, contenido["plantilla_datos"], casos)
-    cambian = sum(
-        1 for nuevo, viejo in zip(casos, contenido["casos"])
-        if nuevo["esperado"]["decision"] != viejo["esperado"]["decision"]
-    )
-    print(f"{len(casos)} casos reevaluados desde {origen.name} → {destino} ({cambian} cambian de decisión)")
 
 
 def capturar_aceptacion() -> list[tuple[str, object]]:
@@ -252,7 +207,21 @@ def main() -> None:
                 "hechos": serializacion.comprimir(serializacion.a_json(inst), plantilla),
                 "esperado": esperado(inst),
             })
-    destino = _escribir(base_activa, plantilla, casos)
+    destino = base_conocimiento.ruta_por_defecto() / "casos_referencia.json"
+    destino.write_text(
+        json.dumps(
+            {
+                "version_base": base_activa.version_base,
+                "version_parametros": base_activa.version_parametros,
+                "hash_base": base_activa.hash,
+                "plantilla_datos": plantilla,
+                "casos": casos,
+            },
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ),
+        encoding="utf-8",
+    )
     por_decision: dict[str, int] = {}
     for caso in casos:
         por_decision[caso["esperado"]["decision"]] = por_decision.get(caso["esperado"]["decision"], 0) + 1
@@ -261,10 +230,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == "--reevaluar":
-        reevaluar(
-            Path(sys.argv[2]) if len(sys.argv) > 2
-            else base_conocimiento.ruta_por_defecto() / "casos_referencia.json"
-        )
-    else:
-        main()
+    main()

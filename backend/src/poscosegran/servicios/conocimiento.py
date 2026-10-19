@@ -16,11 +16,15 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from ..db.modelos import Fuente, Regla, VersionConocimiento
-from ..sistema_experto.base_conocimiento import BaseConocimiento, desde_contenido
-from ..sistema_experto.motor import VERSION_MOTOR
+from ..inferencia.base_conocimiento import BaseConocimiento, desde_contenido
+from ..inferencia.motor import VERSION_MOTOR
+from ..sistema_difuso.motor import version_modelo
 
 _bases: dict[uuid.UUID, BaseConocimiento] = {}
 
+# Candado de transacción con el que se serializan las activaciones. Dos peticiones
+# simultáneas no pueden medir el impacto contra la misma versión vigente y dejar dos
+# activas: la segunda espera y vuelve a leer el estado ya actualizado.
 CANDADO_ACTIVACION = 0x504F5343
 
 
@@ -72,7 +76,7 @@ def registrar(
     version = VersionConocimiento(
         version_base=base.version_base,
         version_parametros=base.version_parametros,
-        version_motor=VERSION_MOTOR,
+        version_motor=version_modelo(base) if 'difuso' in contenido['operativa'] else VERSION_MOTOR,
         hash_contenido=base.hash,
         ruta_archivo=ruta_archivo,
         notas=motivo,

@@ -30,8 +30,10 @@ test('acceso → alta → borrador → cuarentena → evento → reevaluación �
   await page.getByLabel('Fase', { exact: true }).selectOption('INGRESO')
   await page.getByRole('button', { name: /P3/ }).click()
   await page.getByLabel('Moho visible', { exact: true }).selectOption('true')
-  await page.getByLabel('Método · Moho visible', { exact: true }).fill('Inspección visual')
-  await page.getByRole('button', { name: /P5/ }).click()
+  await page.getByLabel('Método · Moho visible', { exact: true }).pressSequentially('Inspección visual', { delay: 25 })
+  await expect(page.getByLabel('Método · Moho visible', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Método · Moho visible', { exact: true })).toHaveValue('Inspección visual')
+  await page.getByRole('button', { name: /P2/ }).click()
   await page.getByLabel('Inicio del historial', { exact: true }).fill('2026-01-01T09:30')
   await page.getByRole('button', { name: 'Guardar borrador', exact: true }).click()
   await expect(page.getByRole('status')).toContainText('Borrador guardado')
@@ -40,18 +42,12 @@ test('acceso → alta → borrador → cuarentena → evento → reevaluación �
   })
   await page.reload()
   await expect(page.getByRole('status')).toContainText('Borrador recuperado')
-  await page.getByRole('button', { name: /P5/ }).click()
+  await page.getByRole('button', { name: /P2/ }).click()
   await expect(page.getByLabel('Inicio del historial', { exact: true })).toHaveValue('2026-01-01T09:30')
   await page.getByRole('button', { name: /P3/ }).click()
   await expect(page.getByLabel('Moho visible', { exact: true })).toHaveValue('true')
   await page.getByRole('button', { name: 'Enviar y evaluar', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Separar y solicitar evaluación técnica', exact: true })).toBeVisible()
-  const inferencia = page.locator('section.panel').filter({ has: page.getByRole('heading', { name: 'Inferencia difusa · Mamdani' }) })
-  await expect(inferencia).toBeVisible()
-  await expect(inferencia).toContainText('no son probabilidades')
-  await inferencia.getByText('Activación de reglas y recorte de salida (α)', { exact: true }).click()
-  await expect(inferencia.getByRole('row').filter({ has: page.getByRole('cell', { name: 'R18', exact: true }) })).toContainText('[1.000, 1.000]')
-  await expect(inferencia).toContainText('CRITICA = 1.000')
   await page.screenshot({ path: 'test-results/resultado-desktop.png', fullPage: true })
   await page.getByRole('button', { name: 'Ver seguimiento', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Seguimiento', exact: true })).toBeVisible()
@@ -63,8 +59,10 @@ test('acceso → alta → borrador → cuarentena → evento → reevaluación �
   await expect(page.getByRole('status')).toContainText('Registro guardado')
   await page.getByRole('button', { name: 'Reevaluar unidad', exact: true }).click()
   await page.getByRole('button', { name: /P3/ }).click()
-  await expect(page.getByLabel('Moho visible', { exact: true })).toHaveValue('DESCONOCIDO')
+  await expect(page.getByLabel('Moho visible', { exact: true })).toHaveValue('true')
+  await expect(page.locator('.capture-field').filter({has: page.getByLabel('Moho visible', {exact: true})})).toContainText('Dato anterior')
   await page.getByLabel('Moho visible', { exact: true }).selectOption('false')
+  await page.locator('.capture-field').filter({has: page.getByLabel('Moho visible', {exact: true})}).getByText('Fecha, método y evidencia', {exact: true}).click()
   await page.getByLabel('Método · Moho visible', { exact: true }).fill('Nueva inspección visual')
   await page.getByRole('button', { name: 'Enviar y evaluar' }).click()
   await expect(page.getByRole('heading', { name: 'Separar y solicitar evaluación técnica', exact: true })).toBeVisible()
@@ -75,10 +73,29 @@ test('acceso → alta → borrador → cuarentena → evento → reevaluación �
   expect(errors).toEqual([])
 })
 
+test('captura completa, continuidad entre pasos y revisión con edición directa', async ({page}) => {
+  await login(page)
+  await page.getByRole('row').filter({hasText:'Costal E2E'}).first().getByRole('button',{name:'Evaluar',exact:true}).click()
+  await page.getByRole('button',{name:/P3.*Verificaciones/}).click()
+  await page.getByText('Infraestructura y entorno',{exact:true}).click()
+  await page.getByLabel('Filtraciones de agua en el almacén',{exact:true}).selectOption('true')
+  await page.getByLabel('Método · Filtraciones de agua en el almacén',{exact:true}).pressSequentially('Inspección de techo')
+  await page.getByText('Sustancias, prevención y vencimiento',{exact:true}).click()
+  await page.getByLabel('Mostrar todas las comprobaciones condicionales y compartidas').check()
+  await expect(page.getByLabel('Vencimiento comercial aplicable',{exact:true})).toBeVisible()
+  const fila = page.locator('.review-list p').filter({hasText:'Filtraciones de agua en el almacén'})
+  await fila.getByRole('button',{name:'Editar',exact:true}).click()
+  await expect(page.getByLabel('Método · Filtraciones de agua en el almacén',{exact:true})).toHaveValue('Inspección de techo')
+  await page.reload()
+  await expect(page.getByRole('button',{name:/P3.*Verificaciones/})).toHaveAttribute('aria-current','step')
+  await expect(page.getByLabel('Filtraciones de agua en el almacén',{exact:true})).toHaveValue('true')
+})
+
 test('sesión y navegación responsive a 360, 768 y 1440 px', async ({ page }) => {
   await login(page)
   for (const width of [360, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 })
+    if (width === 360) await expect(page.locator('.sidebar')).toHaveCSS('width', '64px')
     await page.reload()
     await expect(page.getByRole('heading', { name: 'Inicio', exact: true })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
@@ -86,4 +103,82 @@ test('sesión y navegación responsive a 360, 768 y 1440 px', async ({ page }) =
   }
   await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Iniciar sesión', exact: true })).toBeVisible()
+})
+
+test('núcleo reducido visible, edición persistente y nueve reglas conjuntas', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', e => errors.push(e.message))
+  await login(page)
+  await page.getByRole('row').filter({hasText:'Costal E2E'}).first().getByRole('button', {name:'Evaluar', exact:true}).click()
+  await page.getByRole('button', {name:/P2.*Mediciones/}).click()
+  await expect(page.getByRole('heading', {name:'Cuatro entradas para evaluar el almacenamiento'})).toBeVisible()
+  const principales = page.locator('.fuzzy-intro + .capture-grid')
+  await expect(principales.locator('.capture-field')).toHaveCount(4)
+  await page.getByLabel('Humedad del grano · % b.h.', {exact:true}).fill('12,7')
+  await page.getByLabel('Método · Humedad del grano', {exact:true}).fill('Medidor calibrado')
+  await page.getByLabel('Granos defectuosos · % masa', {exact:true}).fill('2')
+  await page.getByLabel('Método · Granos defectuosos', {exact:true}).fill('Muestra de laboratorio')
+  await page.getByRole('button', {name:/P3.*Verificaciones/}).click()
+  await page.locator('.review-list p').filter({hasText:'Granos defectuosos:'}).getByRole('button', {name:'Editar', exact:true}).click()
+  await expect(page.getByRole('button', {name:/P2.*Mediciones/})).toHaveAttribute('aria-current','step')
+  await expect(page.getByLabel('Humedad del grano · % b.h.', {exact:true})).toHaveValue('12,7')
+  await page.reload()
+  await expect(page.getByLabel('Método · Humedad del grano', {exact:true})).toHaveValue('Medidor calibrado')
+  await page.getByLabel('Mostrar todos los campos complementarios para revisar o corregir').check()
+  await expect(page.getByLabel('Actividad de agua · fracción', {exact:true})).toHaveCount(1)
+  for (const width of [360, 768, 1440]) {
+    await page.setViewportSize({width, height:1000})
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
+    await page.screenshot({path:`test-results/nucleo-captura-${width}.png`, fullPage:true})
+  }
+  await page.getByRole('button', {name:'Base de Conocimiento', exact:true}).click()
+  await expect(page.getByRole('heading', {name:'Núcleo difuso para autorizar almacenamiento'})).toBeVisible()
+  const nucleo = page.locator('.panel').filter({has:page.getByRole('heading', {name:'Núcleo difuso para autorizar almacenamiento'})})
+  await expect(nucleo.locator('table').first().locator('tbody tr')).toHaveCount(9)
+  await expect(nucleo).toContainText('D07')
+  expect(errors).toEqual([])
+})
+
+test('resultado conjunto muestra pertenencias, nueve antecedentes y centroide', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', e => errors.push(e.message))
+  await login(page)
+  await page.getByRole('row').filter({hasText:'Costal E2E'}).first().getByRole('button', {name:'Evaluar', exact:true}).click()
+  const id = new URL(page.url()).searchParams.get('id')!
+  const token = await page.evaluate(() => JSON.parse(sessionStorage.getItem('poscosegran-session')!).access_token as string)
+  const headers = {Authorization:`Bearer ${token}`, 'Idempotency-Key':crypto.randomUUID()}
+  const u = await (await page.request.get(`/api/v1/unidades/${id}`, {headers})).json()
+  const now = new Date(Date.now()-1000).toISOString()
+  const valores: [string, string | number | boolean, string][] = [
+    ['humedad_grano',12.5,'PCT_BH'], ['temperatura_grano',24,'CELSIUS'], ['hr_almacen',50,'PCT_HR'], ['granos_defectuosos',2,'PCT_MASA'],
+    ['metodo_humedad','INSTRUMENTAL','TEXTO'], ['temperatura_muestra',10,'CELSIUS'],
+    ['equipo_humedad_verificado',true,'BOOLEANO'], ['muestra_representativa',true,'BOOLEANO'], ['procedimiento_medicion_cumplido',true,'BOOLEANO'],
+  ]
+  const res = await page.request.post(`/api/v1/unidades/${id}/evaluaciones`, {headers, data:{
+    revision_unidad:u.revision, revision_almacen:u.revision_almacen, fase:'INGRESO',
+    observaciones:valores.map(([campo,valor,unidad]) => ({campo,valor,unidad,captura:'APORTADO',valor_original:String(valor),fecha_observacion:now,metodo:'Ensayo automatizado documentado',evidencia:'Datos académicos de prueba',motivo_no_aplica:null})),
+    historial:{fecha_inicio_historial:now,vida_previa_documentada:.1,evidencia_vida_previa:'Prueba',intervalos_historial:[]},dias_previstos_restantes:20,fecha_salida_prevista:null,
+  }})
+  expect(res.status()).toBe(201)
+  const e = (await res.json()).evaluacion
+  expect(e.version_motor).toBe('3.0.0-mamdani')
+  await page.goto(`/resultado?id=${e.id}`)
+  const panel = page.locator('.panel').filter({has:page.getByRole('heading', {name:'Cómo evaluó el sistema difuso'})})
+  const final = page.locator('.panel').filter({has:page.getByRole('heading', {name:'Decisión final mediante Mamdani'})})
+  await expect(final).toContainText('14')
+  await expect(final).toContainText('Centroide final')
+  await expect(panel.getByText('9 · una salida de severidad', {exact:true})).toBeVisible()
+  await expect(panel.getByLabel('Explorar una entrada del núcleo').locator('option')).toHaveCount(4)
+  await panel.getByLabel('Explorar una entrada del núcleo').selectOption('temperatura_grano')
+  await expect(panel.getByRole('img', {name:/Funciones de pertenencia de Temperatura del grano/})).toBeVisible()
+  await expect(panel).toContainText(/44[.,]819/)
+  await expect(panel.locator('tbody tr').filter({hasText:/^D0/})).toHaveCount(9)
+  for (const width of [360,768,1440]) {
+    await page.setViewportSize({width,height:1000})
+    await page.evaluate(() => window.scrollTo(0,0))
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
+    await page.screenshot({path:`test-results/nucleo-resultado-${width}.png`,fullPage:true})
+    if (width === 1440) await panel.screenshot({path:'test-results/nucleo-panel-desktop.png'})
+  }
+  expect(errors).toEqual([])
 })

@@ -9,3 +9,7 @@ dist
 test-results
 playwright-report
 **/*.log
+**/tests
+**/*.md
+.vscode
+.github

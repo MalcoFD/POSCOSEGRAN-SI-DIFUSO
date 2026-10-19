@@ -1,0 +1,15 @@
+[
+  "abertura_ingreso_plagas",
+  "agua_estancada_entorno",
+  "drenaje_obstruido",
+  "fecha_limpieza_general",
+  "filtracion_agua_almacen",
+  "limpieza_diaria",
+  "malla_ventana_danada",
+  "polvo_humo_gases_vapores",
+  "programa_control_plagas_documentado",
+  "quimicos_combustibles_en_almacen",
+  "residuos_de_proceso_sin_retirar",
+  "residuos_o_maleza_entorno",
+  "sacos_usados_o_desechos_en_almacen"
+]

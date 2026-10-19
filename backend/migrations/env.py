@@ -19,8 +19,8 @@ load_dotenv()
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ / "src"))
 
-from poscosegran.db.base import ESQUEMA, Base  
-from poscosegran.db import modelos  
+from poscosegran.db.base import ESQUEMA, Base  # noqa: E402
+from poscosegran.db import modelos  # noqa: E402,F401  (registra las tablas)
 
 config = context.config
 if config.config_file_name is not None:
@@ -40,7 +40,7 @@ config.set_main_option("sqlalchemy.url", url.replace("%", "%%"))
 metadatos = Base.metadata
 
 
-def _incluir(objeto, nombre, tipo, reflejado, comparado) -> bool:  
+def _incluir(objeto, nombre, tipo, reflejado, comparado) -> bool:  # type: ignore[no-untyped-def]
     """Alembic solo gobierna el esquema de la aplicación."""
     if tipo == "table":
         return objeto.schema == ESQUEMA

@@ -1,9 +1,13 @@
 # POSCOSEGRAN
 
-Sistema experto para evaluar condiciones de almacenamiento de maíz chulpi. React + Vite, FastAPI, motor Python y PostgreSQL 16. La interfaz consume la API real; las decisiones, permisos e incidencias se calculan en el servidor.
+Sistema de inferencia difusa Mamdani para evaluar la autorización de almacenamiento de maíz chulpi. React + Vite, FastAPI, motor Python y PostgreSQL 16. La interfaz consume la API real; las decisiones, permisos e incidencias se calculan en el servidor.
 
 
-**Sistema experto.** El conocimiento del dominio está en [`knowledge/base_conocimiento.yaml`](knowledge/base_conocimiento.yaml), separado de un motor de inferencia genérico, con módulos de explicación y adquisición. El motor es un sistema de inferencia difusa tipo Mamdani (operadores de Zadeh, composición Max-Min y defuzzificación por centroide) con resolución jerárquica por cortes-α; con anchos de transición nulos reproduce exactamente la lógica nítida anterior (sección 13 de la especificación y [`knowledge/POSCOSEGRAN_informe_impacto_difuso.md`](knowledge/POSCOSEGRAN_informe_impacto_difuso.md)). La especificación integrada de las reglas está en [`knowledge/POSCOSEGRAN_52_reglas_base_conocimiento_integrada.md`](knowledge/POSCOSEGRAN_52_reglas_base_conocimiento_integrada.md).
+**Modelo vigente:** base 5.0, motor `3.0.0-mamdani`. El primer nivel tiene **4 mediciones** (3 aplicables en hermético), **9 reglas** y una salida de conservación. El nivel final combina **11 antecedentes derivados o de contexto**, **14 reglas Mamdani** y entrega una de **7 decisiones**. Son **23 reglas difusas** en total; el catálogo conserva 52 reglas documentales y 94 campos de medición, verificación y gestión. Las condiciones críticas se excluyen de conclusiones permisivas mediante los antecedentes de las reglas. El centroide final codifica acciones, no probabilidades de inocuidad.
+
+El núcleo para revisar con la profesora está en [`sistema_difuso/decision.py`](backend/src/poscosegran/sistema_difuso/decision.py) y [`sistema_difuso/motor.py`](backend/src/poscosegran/sistema_difuso/motor.py); las curvas en [`pertenencia.py`](backend/src/poscosegran/sistema_difuso/pertenencia.py), la agregación y el centroide exacto en [`defuzzificacion.py`](backend/src/poscosegran/sistema_difuso/defuzzificacion.py). Las variables, curvas, reglas finales MF01–MF14 y clasificación se versionan en [`knowledge/difuso/base_conocimiento.yaml`](knowledge/difuso/base_conocimiento.yaml), sección `difuso.decision`.
+
+Consulta [el modelo final y su cobertura](docs/CONVERSION_DIFUSA.md) y [su verificación](docs/VERIFICACION_MAMDANI_FINAL.md). La implementación histórica se conserva para reproducir resultados previos. La decisión nueva se obtiene del centroide final; los límites y hallazgos documentales alimentan sus antecedentes.
 
 ## Ejecutar todo con Docker
 
@@ -35,7 +39,7 @@ backend/.venv/Scripts/python.exe backend/scripts/preparar_local.py
 
 Si usas uv: `uv venv backend/.venv --python 3.13` y `uv pip install --python backend/.venv/Scripts/python.exe -e "backend[dev]"`. No recrees el entorno si ya existe.
 
-El preparador aplica migraciones, carga la base difusa 3.1 y crea cinco usuarios de desarrollo: `productor`, `tecnico`, `administrador`, `ingeniero` y `revisor` (los dos últimos con el rol de ingeniería del conocimiento). Para probar el inicio de sesión usa `testeo` como usuario y contraseña; corresponde al perfil PRODUCTOR. También puedes usar los nombres de usuario de los otros roles con esa misma contraseña. Esta credencial se limita al entorno local.
+El preparador aplica migraciones, carga la base Mamdani 5.0 y crea cuatro usuarios de desarrollo: `productor`, `tecnico`, `administrador` e `ingeniero` (ingeniería del conocimiento, para el módulo de adquisición). La contraseña vigente es `POSCOSEGRAN_AUTH_LOCAL_PASSWORD` en `backend/.env`; no se sobrescribe si ya existe. El alias `testeo` corresponde a PRODUCTOR. Esta credencial se limita al entorno local.
 
 En dos terminales:
 
@@ -50,7 +54,7 @@ pnpm.cmd dev
 
 Abre [la aplicación local](http://localhost:8443). API interactiva: [documentación local](http://127.0.0.1:8000/documentacion). El técnico necesita una asignación al lote o almacén para ver sus unidades; el administrador no obtiene acceso general a datos de producción. El ingeniero del conocimiento mantiene la base desde *Adquisición* y tampoco ve unidades.
 
-> Activar una versión de conocimiento exige **cuatro ojos**: quien la propuso no puede activarla. En local, registra la propuesta como `ingeniero` y actívala como `revisor`. La contraseña de ambas cuentas es `testeo`.
+> Activar una versión de conocimiento exige **cuatro ojos**: quien la propuso no puede activarla. Para recorrer el ciclo completo con la única cuenta `ingeniero` de desarrollo, añade `POSCOSEGRAN_ADQUISICION_PERMITIR_AUTOACTIVACION=true` a `backend/.env`. La configuración rechaza esa opción si el entorno es `produccion`.
 
 ## Verificar antes de subir
 
@@ -64,13 +68,12 @@ Reproduce los gates del workflow en el mismo orden y se detiene en el primero qu
 
 ## Documentación
 
-- [Base de conocimiento ejecutable](knowledge/base_conocimiento.yaml)
-- [Especificación integrada de las reglas](knowledge/POSCOSEGRAN_52_reglas_base_conocimiento_integrada.md)
-- [Catálogo de reglas](knowledge/catalogo.yaml)
-- [Casos de referencia](knowledge/casos_referencia.json)
-- [Revisión contra las diapositivas y comprobación de R01–R52](REVISION-SISTEMA-DIFUSO.md)
-- [Plan de despliegue para la presentación, incluido AWS](PLAN-DESPLIEGUE.md)
-- [Cambios y motivos de la revisión](changelog.md)
-- La API interactiva está disponible en `/documentacion` al iniciar el backend.
+- [Instalación, contenedores, Supabase y respaldos](docs/INSTALACION_DESPLIEGUE.md)
+- [Manual de uso](docs/MANUAL_USUARIO.md)
+- [Arquitectura e integración](docs/ARQUITECTURA.md)
+- [API y contrato generado](docs/API.md)
+- [Pruebas y límites de la verificación](docs/PRUEBAS.md)
+- [Decisiones de implementación](docs/DECISIONES.md)
+- [Base de conocimiento vigente](knowledge/POSCOSEGRAN_52_reglas_base_conocimiento_integrada.md)
 
 Supabase todavía no está configurado. El acceso local permite recorrer la aplicación sin ese servicio y está bloqueado en producción. Este prototipo orienta sobre almacenamiento; no certifica inocuidad ni ausencia de micotoxinas.

@@ -2,17 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from decimal import Decimal
-
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
 from ..db.modelos import (
     AccionRequerida,
-    Activacion,
-    Pertenencia,
-    SalidaDifusa,
     Almacen,
     DatoPendiente,
     Estimacion,
@@ -25,17 +19,13 @@ from ..db.modelos import (
     Unidad,
 )
 from ..esquemas import contrato as api
-from ..sistema_experto.base_hechos import Activacion as ActivacionMotor
-from ..sistema_experto.difuso import InferenciaDifusa as InferenciaMotor
 from . import observaciones as obs
 
 
 def _numero(valor: object) -> float | bool | str | None:
     if valor is None or isinstance(valor, (bool, str)):
         return valor
-    if isinstance(valor, (Decimal, int, float)):
-        return float(valor)
-    raise TypeError(f"valor no representable en el contrato: {type(valor).__name__}")
+    return float(valor)  # type: ignore[arg-type]
 
 
 def almacen(fila: Almacen) -> api.Almacen:
@@ -90,8 +80,6 @@ def evaluacion(sesion: Session, fila: Evaluacion) -> api.Evaluacion:
                     if prueba.umbral_booleano is not None
                     else prueba.umbral_texto
                 ),
-                termino=prueba.termino,
-                grado=float(prueba.grado) if prueba.grado is not None else None,
             ))
             for prueba in sesion.scalars(
                 sa.select(MotivoEvidencia)
@@ -113,7 +101,6 @@ def evaluacion(sesion: Session, fila: Evaluacion) -> api.Evaluacion:
                 evidencias=evidencias,
                 fuentes=fuentes,
                 fundamento=motivo.fundamento,
-                grado_activacion=float(motivo.grado_activacion),
             ))
         )
 
@@ -205,95 +192,5 @@ def evaluacion(sesion: Session, fila: Evaluacion) -> api.Evaluacion:
         version_base=fila.version_base,
         version_parametros=fila.version_parametros,
         version_motor=fila.version_motor,
-        inferencia=inferencia(sesion, fila),
-    ))
-
-
-def inferencia_del_motor(
-    resultado: InferenciaMotor | None, traza: Sequence[ActivacionMotor]
-) -> api.InferenciaDifusa | None:
-    """Convierte la inferencia recién calculada por el motor al contrato."""
-    if resultado is None:
-        return None
-    return api.InferenciaDifusa.model_validate(dict(
-        pertenencias=[
-            api.PertenenciaDifusa(
-                variable=p.variable, termino=p.termino, valor=p.valor, unidad=p.unidad, grado=p.grado
-            )
-            for p in resultado.pertenencias
-        ],
-        activaciones=[
-            api.ActivacionDifusa(
-                orden=a.orden, produccion=a.produccion, regla=a.regla, etapa=a.etapa, pasada=a.pasada,
-                grado_inf=a.grado, grado_sup=a.grado_sup, hallazgo=a.hallazgo,
-                terminos_salida=list(a.terminos_salida),
-            )
-            for a in traza
-        ],
-        salida=api.SalidaDifusa(
-            variable=resultado.salida.variable,
-            metodo="CENTROIDE",
-            alturas=[api.AlturaSalida(termino=t, altura=h) for t, h in resultado.salida.alturas],
-            indice=resultado.salida.indice,
-            banda=resultado.salida.banda,
-            decision_indice=resultado.salida.decision_indice,
-        ),
-        origen_decision=resultado.origen_decision,
-        borrosidad=resultado.borrosidad,
-    ))
-
-
-def inferencia(sesion: Session, fila: Evaluacion) -> api.InferenciaDifusa | None:
-    """Reconstruye la inferencia difusa persistida; None en evaluaciones nítidas."""
-    if fila.origen_decision is None or fila.metodo_defuzzificacion is None:
-        return None
-    pertenencias = [
-        api.PertenenciaDifusa(
-            variable=p.variable,
-            termino=p.termino,
-            valor=float(p.valor_nitido) if p.valor_nitido is not None else None,
-            unidad=p.unidad,
-            grado=float(p.grado),
-        )
-        for p in sesion.scalars(
-            sa.select(Pertenencia)
-            .where(Pertenencia.id_evaluacion == fila.id)
-            .order_by(Pertenencia.variable, Pertenencia.termino)
-        )
-    ]
-    activaciones = [
-        api.ActivacionDifusa(
-            orden=a.orden,
-            produccion=a.produccion,
-            regla=a.regla,
-            etapa=a.etapa,
-            pasada=a.pasada,
-            grado_inf=float(a.grado_inf),
-            grado_sup=float(a.grado_sup),
-            hallazgo=a.hallazgo,
-            terminos_salida=list(a.terminos_salida),
-        )
-        for a in sesion.scalars(
-            sa.select(Activacion).where(Activacion.id_evaluacion == fila.id).order_by(Activacion.orden)
-        )
-    ]
-    salidas = list(
-        sesion.scalars(
-            sa.select(SalidaDifusa).where(SalidaDifusa.id_evaluacion == fila.id).order_by(SalidaDifusa.termino)
-        )
-    )
-    variable = salidas[0].variable if salidas else "severidad"
-    return api.InferenciaDifusa.model_validate(dict(
-        pertenencias=pertenencias,
-        activaciones=activaciones,
-        salida=api.SalidaDifusa(
-            variable=variable,
-            metodo="CENTROIDE",
-            alturas=[api.AlturaSalida(termino=s.termino, altura=float(s.altura)) for s in salidas],
-            indice=float(fila.indice_severidad) if fila.indice_severidad is not None else None,
-            banda=fila.banda_severidad,
-            decision_indice=None,
-        ),
-        origen_decision=fila.origen_decision,
-        borrosidad=float(fila.borrosidad) if fila.borrosidad is not None else None,
+        difuso=fila.entrada_efectiva.get('_difuso'),
     ))

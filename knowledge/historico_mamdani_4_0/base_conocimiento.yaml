@@ -1,0 +1,3180 @@
+version_base: '4.0'
+version_parametros: '1.0'
+parametros:
+  humedad_base_max:
+    valor: 13
+    unidad: PCT_BH
+    fundamento: MIXTO
+    fuentes:
+    - S01
+    descripcion: Humedad máxima de la condición base
+  humedad_admision_max:
+    valor: 14
+    unidad: PCT_BH
+    fundamento: MIXTO
+    fuentes:
+    - S01
+    descripcion: Humedad máxima admisible
+  temperatura_alerta:
+    valor: 25
+    unidad: CELSIUS
+    fundamento: MIXTO
+    fuentes:
+    - S04
+    descripcion: Temperatura de alerta en grano o almacén
+  hr_almacen_max:
+    valor: 60
+    unidad: PCT_HR
+    fundamento: PUBLICADO
+    fuentes:
+    - S01
+    - S05
+    descripcion: HR del almacén no hermético (límite exclusivo)
+  aw_alerta:
+    valor: 0.7
+    unidad: FRACCION
+    fundamento: MIXTO
+    fuentes:
+    - S04
+    descripcion: Actividad de agua de alerta fúngica
+  aumento_termico_alerta:
+    valor: 2
+    unidad: CELSIUS
+    fundamento: POLITICA_PROTOTIPO
+    fuentes: []
+    descripcion: Aumento que sugiere punto caliente
+  intervalo_termico_max_horas:
+    valor: 720
+    unidad: TEXTO
+    fundamento: POLITICA_PROTOTIPO
+    fuentes: []
+    descripcion: Ventana máxima entre lecturas comparables (horas)
+  hr_aireacion_max:
+    valor: 70
+    unidad: PCT_HR
+    fundamento: MIXTO
+    fuentes:
+    - S05
+    descripcion: HR exterior máxima para airear (límite exclusivo)
+  muestra_fria_umbral:
+    valor: 4.4
+    unidad: CELSIUS
+    fundamento: MIXTO
+    fuentes:
+    - S07
+    descripcion: Temperatura mínima de la muestra para medidor
+  plazo_corto_max_dias:
+    valor: 30
+    unidad: DIAS
+    fundamento: POLITICA_PROTOTIPO
+    fuentes: []
+    descripcion: Plazo máximo de la banda condicional
+  control_no_hermetico_dias:
+    valor: 14
+    unidad: DIAS
+    fundamento: MIXTO
+    fuentes:
+    - S05
+    descripcion: Inspección del grano sin riesgo activo
+  control_con_riesgo_dias:
+    valor: 7
+    unidad: DIAS
+    fundamento: MIXTO
+    fuentes:
+    - S05
+    descripcion: Inspección con riesgo activo o desconocido
+  control_exterior_dias:
+    valor: 30
+    unidad: DIAS
+    fundamento: MIXTO
+    fuentes:
+    - S06
+    descripcion: Inspección exterior hermética sin riesgo
+  control_almacen_dias:
+    valor: 14
+    unidad: DIAS
+    fundamento: MIXTO
+    fuentes:
+    - S05
+    descripcion: Control del almacén sin riesgo activo
+  intervalo_plan_condicional_max_dias:
+    valor: 7
+    unidad: DIAS
+    fundamento: POLITICA_PROTOTIPO
+    fuentes: []
+    descripcion: Frecuencia mínima del plan en banda condicional
+  vida_alerta:
+    valor: 0.8
+    unidad: FRACCION
+    fundamento: POLITICA_PROTOTIPO
+    fuentes: []
+    descripcion: Aviso preventivo de vida consumida
+  vida_limite:
+    valor: 1.0
+    unidad: FRACCION
+    fundamento: MIXTO
+    fuentes:
+    - S08
+    descripcion: Tiempo de referencia agotado
+  limite_calido_dias:
+    valor: 90
+    unidad: DIAS
+    fundamento: MIXTO
+    fuentes:
+    - S01
+    descripcion: Plazo máximo en clima cálido sin hermeticidad
+  insectos_temperatura_min:
+    valor: 15
+    unidad: CELSIUS
+    fundamento: MIXTO
+    fuentes:
+    - S03
+    descripcion: Inicio del rango favorable a insectos
+  insectos_temperatura_max:
+    valor: 35
+    unidad: CELSIUS
+    fundamento: MIXTO
+    fuentes:
+    - S03
+    descripcion: Fin del rango favorable a insectos
+  estiba_piso_min:
+    valor: 0.15
+    unidad: METROS
+    fundamento: PUBLICADO
+    fuentes:
+    - S02
+    descripcion: Separación mínima al piso
+  estiba_pared_min:
+    valor: 0.5
+    unidad: METROS
+    fundamento: PUBLICADO
+    fuentes:
+    - S02
+    descripcion: Separación mínima a la pared
+  estiba_techo_min:
+    valor: 1.0
+    unidad: METROS
+    fundamento: PUBLICADO
+    fuentes:
+    - S02
+    descripcion: Separación mínima al techo
+  suciedad_animal_max:
+    valor: 0.1
+    unidad: PCT_MASA
+    fundamento: PUBLICADO
+    fuentes:
+    - S04
+    descripcion: Material de origen animal admisible
+  defectuosos_max:
+    valor: 7
+    unidad: PCT_MASA
+    fundamento: TRANSFERIDO
+    fuentes:
+    - S09
+    descripcion: Granos defectuosos (cribado comercial)
+  enfermos_max:
+    valor: 0.5
+    unidad: PCT_MASA
+    fundamento: TRANSFERIDO
+    fuentes:
+    - S09
+    descripcion: Granos enfermos (cribado comercial)
+  quebrados_max:
+    valor: 6
+    unidad: PCT_MASA
+    fundamento: TRANSFERIDO
+    fuentes:
+    - S09
+    descripcion: Granos quebrados (cribado comercial)
+  materia_organica_max:
+    valor: 1.5
+    unidad: PCT_MASA
+    fundamento: TRANSFERIDO
+    fuentes:
+    - S09
+    descripcion: Materia orgánica extraña
+  materia_inorganica_max:
+    valor: 0.5
+    unidad: PCT_MASA
+    fundamento: TRANSFERIDO
+    fuentes:
+    - S09
+    descripcion: Materia inorgánica extraña
+restricciones:
+- menor: humedad_base_max
+  que: humedad_admision_max
+  motivo: la condición base debe quedar por debajo del máximo de admisión
+- menor: vida_alerta
+  que: vida_limite
+  motivo: el aviso preventivo debe llegar antes del agotamiento
+- menor: insectos_temperatura_min
+  que: insectos_temperatura_max
+  motivo: el rango favorable a insectos debe tener un mínimo menor que el máximo
+- menor: control_con_riesgo_dias
+  que: control_no_hermetico_dias
+  igual: true
+  motivo: con riesgo activo el control no puede espaciarse más que sin riesgo
+- menor: control_con_riesgo_dias
+  que: control_exterior_dias
+  igual: true
+  motivo: con riesgo activo el control no puede espaciarse más que sin riesgo
+- menor: control_con_riesgo_dias
+  que: control_almacen_dias
+  igual: true
+  motivo: con riesgo activo el control no puede espaciarse más que sin riesgo
+- menor: enfermos_max
+  que: defectuosos_max
+  igual: true
+  motivo: los granos enfermos son un subconjunto de los defectuosos
+- entre: aw_alerta
+  minimo: 0
+  maximo: 1
+  motivo: la actividad de agua es una fracción
+- entre: vida_alerta
+  minimo: 0
+  maximo: 1
+  motivo: la vida consumida es una fracción
+localizadores:
+  S01: pp. 30–31
+  S02: secciones 3.1–3.6
+  S03: capítulo de almacenamiento
+  S04: párrs. 37–39
+  S05: secciones 5.2.4.2–5.2.4.3
+  S06: E-265-W
+  S07: recomendaciones de medición
+  S08: tabla de tiempo permisible
+  S09: CXS 153-1985
+fundamentos:
+  R01:
+    fuentes:
+    - S01
+    tipo: MIXTO
+  R02:
+    fuentes:
+    - S01
+    - S03
+    tipo: MIXTO
+  R03:
+    fuentes:
+    - S01
+    - S03
+    tipo: MIXTO
+  R04:
+    fuentes:
+    - S04
+    tipo: MIXTO
+  R05:
+    fuentes:
+    - S07
+    tipo: MIXTO
+  R06:
+    fuentes:
+    - S01
+    - S06
+    tipo: MIXTO
+  R07:
+    fuentes:
+    - S01
+    - S05
+    tipo: PUBLICADO
+  R08:
+    fuentes:
+    - S01
+    - S04
+    tipo: MIXTO
+  R09:
+    fuentes:
+    - S04
+    tipo: MIXTO
+  R10:
+    fuentes:
+    - S05
+    tipo: MIXTO
+  R11:
+    fuentes:
+    - S05
+    tipo: MIXTO
+  R12:
+    fuentes:
+    - S06
+    - S01
+    - S03
+    tipo: MIXTO
+  R13:
+    fuentes:
+    - S06
+    tipo: MIXTO
+  R14:
+    fuentes:
+    - S09
+    tipo: MIXTO
+  R15:
+    fuentes:
+    - S05
+    tipo: MIXTO
+  R16:
+    fuentes:
+    - S03
+    tipo: MIXTO
+  R17:
+    fuentes:
+    - S02
+    - S05
+    tipo: PUBLICADO
+  R18:
+    fuentes:
+    - S04
+    tipo: PUBLICADO
+  R19:
+    fuentes:
+    - S02
+    - S04
+    tipo: MIXTO
+  R20:
+    fuentes:
+    - S09
+    - S01
+    tipo: MIXTO
+  R21:
+    fuentes:
+    - S09
+    tipo: TRANSFERIDO
+  R22:
+    fuentes:
+    - S09
+    tipo: TRANSFERIDO
+  R23:
+    fuentes:
+    - S09
+    tipo: MIXTO
+  R24:
+    fuentes:
+    - S02
+    tipo: PUBLICADO
+  R25:
+    fuentes:
+    - S02
+    tipo: MIXTO
+  R26:
+    fuentes:
+    - S02
+    tipo: PUBLICADO
+  R27:
+    fuentes:
+    - S05
+    - S06
+    tipo: MIXTO
+  R28:
+    fuentes:
+    - S08
+    tipo: MIXTO
+  R29:
+    fuentes:
+    - S01
+    - S08
+    tipo: MIXTO
+  R30.1:
+    fuentes:
+    - S02
+    - S04
+    tipo: MIXTO
+  R30.2:
+    fuentes:
+    - S01
+    - S08
+    - S09
+    tipo: MIXTO
+  R30.3:
+    fuentes:
+    - S01
+    - S08
+    - S09
+    tipo: MIXTO
+  R30.4:
+    fuentes: []
+    tipo: POLITICA_PROTOTIPO
+  R30.5:
+    fuentes: []
+    tipo: POLITICA_PROTOTIPO
+  R30.6:
+    fuentes:
+    - S01
+    - S03
+    - S08
+    tipo: MIXTO
+  R30.7:
+    fuentes:
+    - S03
+    - S06
+    - S08
+    tipo: MIXTO
+  R30.8:
+    fuentes: []
+    tipo: POLITICA_PROTOTIPO
+  R30.9:
+    fuentes: []
+    tipo: POLITICA_PROTOTIPO
+  R31:
+    fuentes:
+    - S02
+    - S05
+    tipo: MIXTO
+  R32:
+    fuentes:
+    - S05
+    tipo: MIXTO
+  R33:
+    fuentes:
+    - S02
+    - S05
+    tipo: MIXTO
+  R34:
+    fuentes:
+    - S02
+    - S05
+    tipo: MIXTO
+  R35:
+    fuentes:
+    - S02
+    - S05
+    tipo: MIXTO
+  R36:
+    fuentes:
+    - S02
+    - S04
+    tipo: MIXTO
+  R37:
+    fuentes:
+    - S02
+    - S05
+    tipo: MIXTO
+  R38:
+    fuentes:
+    - S02
+    - S05
+    tipo: MIXTO
+  R39:
+    fuentes:
+    - S02
+    - S05
+    tipo: MIXTO
+  R40:
+    fuentes:
+    - S02
+    - S05
+    tipo: MIXTO
+  R41:
+    fuentes:
+    - S02
+    - S05
+    tipo: MIXTO
+  R42:
+    fuentes:
+    - S02
+    - S05
+    tipo: MIXTO
+  R43:
+    fuentes:
+    - S02
+    - S05
+    tipo: MIXTO
+  R44:
+    fuentes:
+    - S02
+    - S05
+    tipo: MIXTO
+  R45:
+    fuentes:
+    - S02
+    tipo: PUBLICADO
+  R46:
+    fuentes:
+    - S02
+    tipo: PUBLICADO
+  R47:
+    fuentes:
+    - S02
+    - S05
+    tipo: MIXTO
+  R48:
+    fuentes:
+    - S02
+    tipo: PUBLICADO
+  R49:
+    fuentes:
+    - S02
+    tipo: MIXTO
+  R50:
+    fuentes:
+    - S02
+    tipo: MIXTO
+  R51:
+    fuentes:
+    - S02
+    tipo: MIXTO
+  R52:
+    fuentes:
+    - S02
+    tipo: MIXTO
+  VALIDACION:
+    fuentes: []
+    tipo: POLITICA_PROTOTIPO
+  SECCION_5:
+    fuentes:
+    - S05
+    - S06
+    tipo: MIXTO
+  SECCION_6:
+    fuentes:
+    - S08
+    tipo: MIXTO
+  SECCION_7_1:
+    fuentes: []
+    tipo: POLITICA_PROTOTIPO
+tablas:
+  tiempo_referencia:
+    id: NDSU_CEREALES_S08
+    fuente: S08
+    columnas_f:
+    - 50
+    - 60
+    - 70
+    - 80
+    columnas_c:
+    - 10
+    - 15.56
+    - 21.11
+    - 26.67
+    filas:
+    - humedad: 14
+      dias:
+      - null
+      - null
+      - 200
+      - 140
+    - humedad: 15
+      dias:
+      - null
+      - 240
+      - 125
+      - 70
+    - humedad: 16
+      dias:
+      - 230
+      - 120
+      - 70
+      - 40
+    - humedad: 17
+      dias:
+      - 130
+      - 75
+      - 45
+      - 20
+    - humedad: 18
+      dias:
+      - 90
+      - 50
+      - 30
+      - 15
+    - humedad: 19
+      dias:
+      - 70
+      - 35
+      - 20
+      - 10
+    - humedad: 20
+      dias:
+      - 50
+      - 25
+      - 14
+      - 7
+calculos:
+  temperatura_grano_aplicable:
+    descripcion: 'Escenario de planificación hermético sin apertura (sección 6.2):
+      la mayor entre la última temperatura interna válida y la máxima ambiental documentada.'
+    aplica_estimacion: aplica_estimacion_hermetica
+  tiempo:
+    tabla: tiempo_referencia
+    parametro_limite: vida_limite
+  plazo_compatible:
+    parametro_limite: vida_limite
+    parametro_limite_calido: limite_calido_dias
+    parametro_plazo_condicional: plazo_corto_max_dias
+    hecho_condicional: HUMEDAD_CONDICIONAL
+  proximo_control:
+    parametro_riesgo: control_con_riesgo_dias
+    parametro_hermetico: control_exterior_dias
+    parametro_no_hermetico: control_no_hermetico_dias
+definiciones:
+  medicion_confirmada:
+    descripcion: Medición de humedad con método válido, equipo verificado, muestra
+      representativa y procedimiento cumplido
+    guarda:
+      campo: metodo_humedad
+      entonces:
+        todos:
+        - dato: metodo_humedad
+          en:
+          - INSTRUMENTAL
+          - LABORATORIO
+          descripcion: método instrumental o de laboratorio
+        - dato: equipo_humedad_verificado
+          descripcion: equipo verificado
+        - dato: muestra_representativa
+          descripcion: muestra representativa
+        - dato: procedimiento_medicion_cumplido
+          descripcion: procedimiento cumplido
+        - implica:
+            si:
+              dato: metodo_humedad
+              op: EQ
+              valor: INSTRUMENTAL
+            entonces:
+              dato: temperatura_muestra
+              op: GTE
+              valor:
+                param: muestra_fria_umbral
+          descripcion: muestra no fría para el medidor
+  integridad_hermetica:
+    descripcion: Barrera hermética comprobada
+    implica:
+      si:
+        contexto: tipo_almacenamiento
+        igual: HERMETICO
+      entonces:
+        todos:
+        - dato: sello_integro
+          descripcion: sello íntegro
+        - dato: cierre_seguro
+          descripcion: cierre seguro
+        - negar:
+            dato: perforacion_barrera
+          descripcion: sin perforación
+        - negar:
+            dato: bolsa_abierta_sin_resellar
+          descripcion: sin apertura sin resellar
+        - negar:
+            inconsistencia: hermeticidad
+          descripcion: sin contradicción registrada sobre la barrera
+  aplica_estimacion_hermetica:
+    descripcion: Hermético sin sensor interno y con barrera comprobada
+    todos:
+    - contexto: tipo_almacenamiento
+      igual: HERMETICO
+    - negar:
+        es_verdadero:
+          dato: sensor_interno_hermetico
+    - es_verdadero:
+        definicion: integridad_hermetica
+  recipiente_apto:
+    descripcion: Recipiente limpio, seco, de grado alimentario, resistente y con cierre
+      seguro
+    todos:
+    - dato: recipiente_limpio
+      descripcion: recipiente limpio
+    - dato: recipiente_seco
+      descripcion: recipiente seco
+    - dato: material_grado_alimentario
+      descripcion: material de grado alimentario
+    - dato: recipiente_resistente
+      descripcion: recipiente resistente
+    - dato: cierre_seguro
+      descripcion: cierre seguro
+  estiba_apta:
+    descripcion: Separaciones mínimas a piso, pared y techo
+    todos:
+    - dato: distancia_piso
+      op: GTE
+      valor:
+        param: estiba_piso_min
+      descripcion: separación del piso
+    - dato: distancia_pared
+      op: GTE
+      valor:
+        param: estiba_pared_min
+      descripcion: separación de la pared
+    - dato: distancia_techo
+      op: GTE
+      valor:
+        param: estiba_techo_min
+      descripcion: separación del techo
+  almacen_higienico:
+    descripcion: Limpieza exigible vigente
+    todos:
+    - vigente_meses: fecha_limpieza_general
+      meses: 1
+      descripcion: limpieza general en el último mes
+    - dato: limpieza_diaria
+      descripcion: limpieza diaria
+    - dato: limpieza_tras_operaciones
+      descripcion: limpieza tras operaciones
+    - implica:
+        si:
+          contexto: fase
+          igual: INGRESO
+        entonces:
+          dato: limpieza_previa_nuevo_lote
+      descripcion: limpieza previa al nuevo lote
+  calidad_aire_adecuada:
+    descripcion: Sin contaminantes ni productos incompatibles
+    todos:
+    - negar:
+        dato: polvo_humo_gases_vapores
+      descripcion: sin polvo, humo, gases o vapores
+    - negar:
+        dato: quimicos_combustibles_en_almacen
+      descripcion: sin químicos ni combustibles
+  calidad_fisica_conforme:
+    descripcion: Calidad física dentro del cribado comercial
+    todos:
+    - dato: suciedad_origen_animal
+      op: LTE
+      valor:
+        param: suciedad_animal_max
+      descripcion: suciedad de origen animal
+    - negar:
+        dato: heces_visibles
+      descripcion: sin heces visibles
+    - dato: granos_defectuosos
+      op: LTE
+      valor:
+        param: defectuosos_max
+      descripcion: granos defectuosos
+    - dato: granos_enfermos
+      op: LTE
+      valor:
+        param: enfermos_max
+      descripcion: granos enfermos
+    - dato: granos_quebrados
+      op: LTE
+      valor:
+        param: quebrados_max
+      descripcion: granos quebrados
+    - dato: materia_organica_extrana
+      op: LTE
+      valor:
+        param: materia_organica_max
+      descripcion: materia orgánica extraña
+    - dato: materia_inorganica_extrana
+      op: LTE
+      valor:
+        param: materia_inorganica_max
+      descripcion: materia inorgánica extraña
+  indicio_r15_residual:
+    descripcion: Indicios de insectos no explicados por un descarte válido
+    alguno:
+    - todos:
+      - &id001
+        alguno:
+        - dato: granos_perforados
+        - dato: polvillo_inusual
+        - dato: exuvias_larvas
+        - dato: ruido_alimentacion
+      - negar:
+          todos:
+          - dato: resultado_revision_plagas
+            op: EQ
+            valor: DESCARTADA
+          - dato: revision_plagas_cubre_indicios_actuales
+    - todos:
+      - es_desconocido: *id001
+      - constante: DESCONOCIDO
+  sin_evidencia_de_plagas:
+    descripcion: Sin signos de plagas ni episodio de revisión abierto
+    todos:
+    - negar:
+        dato: insectos_vivos
+      descripcion: sin insectos vivos
+    - negar:
+        dato: heces_roedores_aves_entorno
+      descripcion: sin heces de roedores o aves
+    - negar:
+        dato: huellas
+      descripcion: sin huellas
+    - negar:
+        dato: bolsa_roida
+      descripcion: sin envase roído
+    - negar:
+        dato: grano_derramado_por_plaga
+      descripcion: sin grano derramado por plaga
+    - negar:
+        definicion: indicio_r15_residual
+      descripcion: sin indicios residuales de insectos
+    - negar:
+        episodio:
+        - REVISION_PLAGAS
+      descripcion: sin revisión de plagas abierta
+  sin_evidencia_de_deterioro:
+    descripcion: Sin indicios de deterioro ni cuarentena abierta
+    todos:
+    - negar:
+        dato: moho_visible
+      descripcion: sin moho visible
+    - negar:
+        dato: olor_anormal
+      descripcion: sin olor anormal
+    - negar:
+        dato: condensacion_interna
+      descripcion: sin condensación interna
+    - negar:
+        dato: germinacion
+      descripcion: sin germinación
+    - negar:
+        episodio:
+        - CUARENTENA
+      descripcion: sin cuarentena abierta
+  aw_sin_alerta:
+    descripcion: Actividad de agua no medida o bajo el umbral de alerta
+    guarda:
+      campo: aw_medida
+      entonces:
+        alguno:
+        - es_falso:
+            dato: aw_medida
+        - dato: actividad_agua
+          op: LT
+          valor:
+            param: aw_alerta
+  ambiente_base_apto:
+    descripcion: Ambiente del almacén dentro de la condición base (R06)
+    alguno:
+    - hecho: AMBIENTE_BASE_APTO
+    - todos:
+      - negar:
+          hecho: RIESGO_REHUMEDECIMIENTO
+      - negar:
+          hecho: RIESGO_TERMICO
+      - constante: DESCONOCIDO
+  temperatura_bajo_alerta:
+    descripcion: Temperatura del grano por debajo de la alerta
+    dato: temperatura_grano_aplicable
+    op: LT
+    valor:
+      param: temperatura_alerta
+  lecturas_termicas_comparables:
+    descripcion: Dos lecturas del mismo punto y método dentro de la ventana permitida
+    todos:
+    - dato: punto_medicion
+      op: EQ
+      valor:
+        dato: punto_medicion_previo
+    - dato: metodo_termico
+      op: EQ
+      valor:
+        dato: metodo_termico_previo
+    - horas_entre:
+      - temperatura_grano
+      - temperatura_grano_previa
+      op: GT
+      valor: 0
+    - horas_entre:
+      - temperatura_grano
+      - temperatura_grano_previa
+      op: LTE
+      valor:
+        param: intervalo_termico_max_horas
+  datos_aireacion_completos:
+    descripcion: Medición confirmada y lecturas exteriores simultáneas con tabla de
+      equilibrio
+    todos:
+    - definicion: medicion_confirmada
+    - presentes:
+      - temperatura_grano
+      - hr_aire_exterior
+      - temperatura_aire_exterior
+      - lluvia_o_niebla
+      - humedad_equilibrio_maiz
+      - tabla_equilibrio_id
+  riesgo_activo:
+    descripcion: Hay un hallazgo adverso, una incidencia abierta o faltan comprobaciones
+      de riesgo
+    alguno:
+    - algun_hecho:
+      - HUMEDAD_NO_APTA
+      - HUMEDAD_CONDICIONAL
+      - RIESGO_FUNGICO_HIDRICO
+      - MEDICION_HUMEDAD_NO_CONFIRMADA
+      - RIESGO_REHUMEDECIMIENTO
+      - RIESGO_TERMICO
+      - PUNTO_CALIENTE_SOSPECHADO
+      - HERMETICIDAD_COMPROMETIDA
+      - INFESTACION_CONFIRMADA
+      - INFESTACION_SOSPECHADA
+      - AMBIENTE_FAVORABLE_A_INSECTOS
+      - CONTAMINACION_BIOLOGICA_SOSPECHADA
+      - DETERIORO_SOSPECHADO
+      - CONTAMINACION_ANIMAL_OBSERVADA
+      - LOTE_NO_CONFORME_POR_DEFECTOS
+      - LOTE_REQUIERE_LIMPIEZA_Y_CLASIFICACION
+      - RECIPIENTE_NO_APTO
+      - ESTIBA_NO_APTA
+      - ALMACEN_NO_HIGIENICO
+      - CALIDAD_AIRE_INADECUADA
+      - VIDA_ESTIMADA_PROXIMA_AL_LIMITE
+      - VIDA_O_PLAZO_AGOTADO
+    - episodio:
+      - CUARENTENA
+      - REVISION_PLAGAS
+      - REVISION_TERMICA
+      - CORRECCION
+    - negar:
+        todos:
+        - conocidos:
+          - humedad_grano
+          - metodo_humedad
+          - equipo_humedad_verificado
+          - muestra_representativa
+          - procedimiento_medicion_cumplido
+          - temperatura_grano
+          - temperatura_almacen
+          - aw_medida
+          - insectos_vivos
+          - heces_roedores_aves_entorno
+          - huellas
+          - bolsa_roida
+          - grano_derramado_por_plaga
+          - granos_perforados
+          - polvillo_inusual
+          - exuvias_larvas
+          - ruido_alimentacion
+          - moho_visible
+          - olor_anormal
+          - condensacion_interna
+          - germinacion
+          - suciedad_origen_animal
+          - heces_visibles
+          - granos_defectuosos
+          - granos_enfermos
+          - granos_quebrados
+          - materia_organica_extrana
+          - materia_inorganica_extrana
+          - recipiente_limpio
+          - recipiente_seco
+          - material_grado_alimentario
+          - recipiente_resistente
+          - cierre_seguro
+          - distancia_piso
+          - distancia_pared
+          - distancia_techo
+          - polvo_humo_gases_vapores
+          - quimicos_combustibles_en_almacen
+          - fecha_limpieza_general
+          - limpieza_diaria
+          - limpieza_tras_operaciones
+        - implica:
+            si:
+              contexto: fase
+              igual: INGRESO
+            entonces:
+              conocidos:
+              - limpieza_previa_nuevo_lote
+        - implica:
+            si:
+              contexto: tipo_almacenamiento
+              igual: NO_HERMETICO
+            entonces:
+              conocidos:
+              - hr_almacen
+        - implica:
+            si:
+              contexto: tipo_almacenamiento
+              igual: HERMETICO
+            entonces:
+              conocidos:
+              - sello_integro
+              - perforacion_barrera
+              - bolsa_abierta_sin_resellar
+        - implica:
+            si:
+              es_verdadero:
+                dato: aw_medida
+            entonces:
+              conocidos:
+              - actividad_agua
+    - algun_hecho:
+      - INFRAESTRUCTURA_CON_FILTRACION
+      - DRENAJE_DEFICIENTE
+      - BARRERA_ANTIPLAGAS_DEFICIENTE
+      - ENTORNO_NO_HIGIENICO
+      - MATERIAL_RESIDUAL_EN_ALMACEN
+      - UNIDAD_EXPUESTA_A_AGUA
+      - PALETA_NO_APTA
+      - ESTIBA_INSEGURA
+      - ACCESO_INSPECCION_INSUFICIENTE
+      - IDENTIDAD_DE_UNIDAD_NO_VERIFICABLE
+      - TRAZABILIDAD_INCOMPLETA
+      - HISTORIAL_DE_UBICACION_INCIERTO
+      - POSIBLE_CONTAMINACION_CRUZADA
+      - DERRAME_DE_GRANO_REGISTRADO
+      - REINCORPORACION_NO_VERIFICADA
+      - RIESGO_TRANSFERENCIA_OLOR
+      - GESTION_PREVENTIVA_PLAGAS_INCOMPLETA
+      - TRATAMIENTO_NO_VERIFICABLE
+      - CONTACTO_QUIMICO_SOSPECHADO
+      - PRODUCTO_VENCIDO
+    - es_desconocido:
+        conocidos: &id002
+        - filtracion_agua_almacen
+        - drenaje_obstruido
+        - malla_ventana_danada
+        - abertura_ingreso_plagas
+        - humedad_por_agua_en_unidad
+        - agua_estancada_entorno
+        - residuos_o_maleza_entorno
+        - sacos_usados_o_desechos_en_almacen
+        - residuos_de_proceso_sin_retirar
+        - paleta_danada_o_con_salientes
+        - estiba_inestable
+        - altura_supera_limite_proveedor
+        - pasillo_inspeccion_obstruido
+        - distancia_entre_estantes
+        - identificacion_unidad_legible
+        - registro_trazabilidad_completo
+        - movimiento_sin_registro
+        - contacto_con_unidad_en_cuarentena
+        - derrame_grano_en_piso
+        - grano_derramado_reincorporado
+        - alimentos_olor_incompatible_en_contacto
+        - programa_control_plagas_documentado
+        - aplicacion_plaguicida_sin_registro_competente
+        - exposicion_quimica_del_grano
+        - vencimiento_aplicable
+  con_riesgo:
+    descripcion: 'Riesgo activo o desconocido: acorta los plazos de control'
+    no_falso:
+      definicion: riesgo_activo
+  plazo_ingreso_vencido:
+    descripcion: inspección de ingreso
+    implica:
+      si:
+        contexto: fase
+        igual: INGRESO
+      entonces:
+        negar:
+          dato: ingreso_inspeccionado
+  plazo_grano_vencido:
+    descripcion: inspección del grano
+    implica:
+      si:
+        todos:
+        - negar:
+            contexto: fase
+            igual: INGRESO
+        - contexto: tipo_almacenamiento
+          igual: NO_HERMETICO
+      entonces:
+        vencido_dias: fecha_inspeccion_grano
+        dias:
+          elegir:
+            si:
+              definicion: con_riesgo
+            entonces:
+              param: control_con_riesgo_dias
+            sino:
+              param: control_no_hermetico_dias
+  plazo_exterior_vencido:
+    descripcion: inspección exterior del recipiente hermético
+    implica:
+      si:
+        todos:
+        - negar:
+            contexto: fase
+            igual: INGRESO
+        - contexto: tipo_almacenamiento
+          igual: HERMETICO
+      entonces:
+        vencido_dias: fecha_inspeccion_exterior
+        dias:
+          elegir:
+            si:
+              definicion: con_riesgo
+            entonces:
+              param: control_con_riesgo_dias
+            sino:
+              param: control_exterior_dias
+  plazo_almacen_vencido:
+    descripcion: control del almacén
+    vencido_dias: fecha_control_almacen
+    dias:
+      elegir:
+        si:
+          definicion: con_riesgo
+        entonces:
+          param: control_con_riesgo_dias
+        sino:
+          param: control_almacen_dias
+  control_vigente:
+    descripcion: Ningún control vencido ni invalidado por un evento posterior
+    todos:
+    - negar:
+        es_verdadero:
+          dato: hay_evento_que_invalida_control
+      descripcion: sin evento posterior que invalide los controles
+    - negar:
+        definicion: plazo_ingreso_vencido
+      descripcion: inspección de ingreso realizada
+    - negar:
+        definicion: plazo_grano_vencido
+      descripcion: inspección del grano en plazo
+    - negar:
+        definicion: plazo_exterior_vencido
+      descripcion: inspección exterior en plazo
+    - negar:
+        definicion: plazo_almacen_vencido
+      descripcion: control del almacén en plazo
+  condiciones_comunes_aptas:
+    descripcion: Condiciones comunes a toda autorización
+    todos:
+    - definicion: recipiente_apto
+      descripcion: recipiente apto
+    - definicion: estiba_apta
+      descripcion: estiba apta
+    - definicion: almacen_higienico
+      descripcion: almacén higiénico
+    - definicion: calidad_aire_adecuada
+      descripcion: calidad del aire adecuada
+    - definicion: calidad_fisica_conforme
+      descripcion: calidad física conforme
+    - definicion: sin_evidencia_de_plagas
+      descripcion: sin evidencia de plagas
+    - definicion: sin_evidencia_de_deterioro
+      descripcion: sin evidencia de deterioro
+    - definicion: aw_sin_alerta
+      descripcion: actividad de agua sin alerta
+    - definicion: ambiente_base_apto
+      descripcion: ambiente del almacén apto
+    - definicion: control_vigente
+      descripcion: controles vigentes
+    - definicion: medicion_confirmada
+      descripcion: medición de humedad confirmada
+    - definicion: temperatura_bajo_alerta
+      descripcion: temperatura del grano bajo la alerta
+    - alguno:
+      - contexto: tipo_almacenamiento
+        definido: true
+      - constante: DESCONOCIDO
+      descripcion: modalidad de almacenamiento definida
+  rama_condicional_admisible:
+    descripcion: Banda condicional de humedad admisible (sección 7.2)
+    implica:
+      si:
+        hecho: HUMEDAD_CONDICIONAL
+      entonces:
+        todos:
+        - contexto: tipo_almacenamiento
+          igual: NO_HERMETICO
+          descripcion: la banda condicional solo se admite en almacenamiento no hermético
+        - es_falso:
+            contexto: clima_calido
+          descripcion: se exige clima no cálido documentado
+        - es_verdadero:
+            calculo: dias_previstos_restantes
+            op: LTE
+            valor:
+              param: plazo_corto_max_dias
+          descripcion: plazo restante conocido y dentro del plazo corto
+        - es_verdadero:
+            definicion: condiciones_comunes_aptas
+          descripcion: las condiciones comunes deben estar comprobadas
+        - es_verdadero:
+            calculo: plazo_compatible
+          descripcion: el plazo debe ser compatible con el tiempo de referencia
+        - es_verdadero:
+            calculo: dictamen_cubre
+          descripcion: falta un dictamen técnico vigente para ese rango y plazo
+        - es_verdadero:
+            calculo: plan_vigente
+          descripcion: falta un plan de monitoreo registrado y vigente
+        - es_verdadero:
+            calculo: plan_intervalo_dias
+            op: LTE
+            valor:
+              param: intervalo_plan_condicional_max_dias
+          descripcion: el plan debe fijar control como máximo cada 7 días
+        - es_verdadero:
+            calculo: plan_salida_definida
+          descripcion: el plan debe fijar fecha de salida
+  proteccion_requerida:
+    descripcion: No hermético, o hermético con protección activa (R12)
+    alguno:
+    - contexto: tipo_almacenamiento
+      igual: NO_HERMETICO
+    - hecho: PROTECCION_HERMETICA_ACTIVA
+    - constante: DESCONOCIDO
+etapas:
+- validacion
+- encadenamiento
+- tiempo
+- aviso_tiempo
+- control
+- consolidacion
+reglas:
+- id: VALIDACION-inconsistencias
+  regla: VALIDACION
+  etapa: validacion
+  si:
+    alguno:
+    - todos:
+      - dato: sello_integro
+      - alguno:
+        - dato: perforacion_barrera
+        - dato: bolsa_abierta_sin_resellar
+      descripcion: sello declarado íntegro con barrera perforada o abierta
+    - todos:
+      - dato: insectos_vivos
+      - dato: resultado_revision_plagas
+        op: EQ
+        valor: DESCARTADA
+      descripcion: insectos vivos con revisión de plagas descartada
+    - dato: granos_enfermos
+      op: GT
+      valor:
+        dato: granos_defectuosos
+      descripcion: granos enfermos superan a los defectuosos
+    - inconsistencia: '*'
+  entonces:
+    hallazgo: DATOS_INCONSISTENTES
+    solicitudes:
+    - CORRECCION
+    mensaje: 'Hay registros contradictorios: {soportes}. Se conserva el indicio adverso
+      y se solicita revisión.'
+- id: VALIDACION-invalidos
+  regla: VALIDACION
+  etapa: validacion
+  si:
+    hay_invalidos: true
+  entonces:
+    hallazgo: DATOS_INVALIDOS
+    solicitudes:
+    - CORRECCION
+    mensaje: 'Datos inválidos o vencidos que no participan en comparaciones: {invalidos}.'
+- id: R01
+  si:
+    todos:
+    - definicion: medicion_confirmada
+    - dato: humedad_grano
+      op: GT
+      valor:
+        param: humedad_admision_max
+  entonces:
+    hallazgo: HUMEDAD_NO_APTA
+    solicitudes:
+    - SUSPENSION
+    mensaje: 'Humedad confirmada {dato:humedad_grano} % b.h. supera el máximo de admisión
+      de {param:humedad_admision_max} %: no procede la {ingreso?admisión|permanencia
+      normal}.'
+    accion:
+      codigo: CORREGIR
+      descripcion: Secar el lote, medir de nuevo y volver a evaluar.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: humedad_grano
+    op: GT
+    valor:
+      param: humedad_admision_max
+- id: R02
+  si:
+    todos:
+    - definicion: medicion_confirmada
+    - dato: humedad_grano
+      op: GT
+      valor:
+        param: humedad_base_max
+    - dato: humedad_grano
+      op: LTE
+      valor:
+        param: humedad_admision_max
+  entonces:
+    hallazgo: HUMEDAD_CONDICIONAL
+    mensaje: Humedad confirmada {dato:humedad_grano} % b.h. está en la banda condicional
+      (> {param:humedad_base_max} % y <= {param:humedad_admision_max} %).
+  evidencias:
+  - dato: humedad_grano
+    op: GT
+    valor:
+      param: humedad_base_max
+- id: R02-secado
+  regla: R02
+  si:
+    todos:
+    - hecho: HUMEDAD_CONDICIONAL
+    - alguno:
+      - contexto: tipo_almacenamiento
+        igual: HERMETICO
+      - es_verdadero:
+          contexto: clima_calido
+      - es_verdadero:
+          calculo: dias_previstos_restantes
+          op: GT
+          valor:
+            param: plazo_corto_max_dias
+  entonces:
+    hallazgo: SECADO_REQUERIDO_BANDA_CONDICIONAL
+    solicitudes:
+    - CORRECCION
+    mensaje: 'La banda condicional no es admisible con almacenamiento hermético, clima
+      cálido o plazo mayor de {param:plazo_corto_max_dias} días: secar hasta <= {param:humedad_base_max}
+      %.'
+    accion:
+      codigo: CORREGIR
+      descripcion: Secar hasta {param:humedad_base_max} % b.h. y reevaluar.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: humedad_grano
+    op: GT
+    valor:
+      param: humedad_base_max
+- id: R03
+  si:
+    todos:
+    - definicion: medicion_confirmada
+    - dato: humedad_grano
+      op: LTE
+      valor:
+        param: humedad_base_max
+  entonces:
+    hallazgo: HUMEDAD_APTA_BASE
+    mensaje: Humedad confirmada {dato:humedad_grano} % b.h. dentro de la condición
+      base. Este hecho no autoriza por sí solo.
+  evidencias:
+  - dato: humedad_grano
+    op: LTE
+    valor:
+      param: humedad_base_max
+- id: R04
+  si:
+    todos:
+    - dato: aw_medida
+    - dato: actividad_agua
+      op: GTE
+      valor:
+        param: aw_alerta
+  entonces:
+    hallazgo: RIESGO_FUNGICO_HIDRICO
+    solicitudes:
+    - CORRECCION
+    mensaje: Actividad de agua medida {dato:actividad_agua} alcanza o supera {param:aw_alerta}.
+    accion:
+      codigo: REVISION_TECNICA
+      descripcion: Secado o evaluación técnica y nueva medición.
+      responsable: TECNICO
+  evidencias:
+  - dato: actividad_agua
+    op: GTE
+    valor:
+      param: aw_alerta
+- id: R05
+  si:
+    todos:
+    - alguno:
+      - aportado: humedad_grano
+      - aportado: metodo_humedad
+    - es_falso:
+        definicion: medicion_confirmada
+  entonces:
+    hallazgo: MEDICION_HUMEDAD_NO_CONFIRMADA
+    solicitudes:
+    - CORRECCION
+    mensaje: 'La medición de humedad no está confirmada: corregir método, equipo,
+      representatividad o acondicionamiento. Una estimación indirecta no sustenta
+      R01–R03.'
+    accion:
+      codigo: CORREGIR
+      descripcion: Repetir la medición con procedimiento y equipo verificados.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: metodo_humedad
+    op: EQ
+    valor: INSTRUMENTAL
+- id: R06
+  si:
+    todos:
+    - dato: temperatura_almacen
+      op: LT
+      valor:
+        param: temperatura_alerta
+    - alguno:
+      - todos:
+        - contexto: tipo_almacenamiento
+          igual: NO_HERMETICO
+        - dato: hr_almacen
+          op: LT
+          valor:
+            param: hr_almacen_max
+      - todos:
+        - contexto: tipo_almacenamiento
+          igual: HERMETICO
+        - definicion: integridad_hermetica
+  entonces:
+    hallazgo: AMBIENTE_BASE_APTO
+    mensaje: Ambiente del almacén dentro de la condición base.
+  evidencias:
+  - dato: temperatura_almacen
+    op: LT
+    valor:
+      param: temperatura_alerta
+  - dato: hr_almacen
+    op: LT
+    valor:
+      param: hr_almacen_max
+- id: R07
+  aplica_si:
+    contexto: tipo_almacenamiento
+    igual: NO_HERMETICO
+  si:
+    dato: hr_almacen
+    op: GTE
+    valor:
+      param: hr_almacen_max
+  entonces:
+    hallazgo: RIESGO_REHUMEDECIMIENTO
+    solicitudes:
+    - CORRECCION
+    mensaje: Humedad relativa del almacén {dato:hr_almacen} % alcanza o supera {param:hr_almacen_max}
+      % en almacenamiento no hermético.
+    accion:
+      codigo: CORREGIR
+      descripcion: Corregir la exposición a humedad del almacén.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: hr_almacen
+    op: GTE
+    valor:
+      param: hr_almacen_max
+- id: R08
+  si:
+    alguno:
+    - dato: temperatura_almacen
+      op: GTE
+      valor:
+        param: temperatura_alerta
+    - dato: temperatura_grano_aplicable
+      op: GTE
+      valor:
+        param: temperatura_alerta
+  entonces:
+    hallazgo: RIESGO_TERMICO
+    solicitudes:
+    - CORRECCION
+    mensaje: Temperatura de {param:temperatura_alerta} °C o más en el almacén o en
+      el grano.
+    accion:
+      codigo: CORREGIR
+      descripcion: Evaluar enfriamiento, revisar el grano y recalcular el tiempo.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: temperatura_almacen
+    op: GTE
+    valor:
+      param: temperatura_alerta
+  - dato: temperatura_grano_aplicable
+    op: GTE
+    valor:
+      param: temperatura_alerta
+- id: R09
+  aplica_si:
+    aportado: temperatura_grano_previa
+  si:
+    todos:
+    - es_verdadero:
+        definicion: lecturas_termicas_comparables
+    - diferencia:
+      - temperatura_grano
+      - temperatura_grano_previa
+      op: GTE
+      valor:
+        param: aumento_termico_alerta
+  entonces:
+    hallazgo: PUNTO_CALIENTE_SOSPECHADO
+    solicitudes:
+    - CORRECCION
+    mensaje: 'La temperatura del grano aumentó {diferencia:temperatura_grano,temperatura_grano_previa}
+      °C en {horas:temperatura_grano,temperatura_grano_previa} horas. El aumento no
+      confirma infestación ni actividad microbiana: exige inspección.'
+    accion:
+      codigo: REVISION_TECNICA
+      descripcion: Inspeccionar varios puntos y buscar la causa del aumento.
+      responsable: TECNICO
+  evidencias:
+  - dato: temperatura_grano
+  - dato: temperatura_grano_previa
+- id: R10
+  aplica_si:
+    contexto: tipo_almacenamiento
+    igual: NO_HERMETICO
+  si:
+    todos:
+    - es_verdadero:
+        definicion: datos_aireacion_completos
+    - dato: humedad_grano
+      op: GT
+      valor:
+        dato: humedad_equilibrio_maiz
+    - dato: hr_aire_exterior
+      op: LT
+      valor:
+        param: hr_aireacion_max
+    - negar:
+        dato: lluvia_o_niebla
+    - dato: temperatura_aire_exterior
+      op: LTE
+      valor:
+        dato: temperatura_grano
+  entonces:
+    hallazgo: AIREACION_FAVORABLE
+    mensaje: El aire exterior puede secar el grano sin aumentar su temperatura. La
+      recomendación queda subordinada a la decisión final.
+  evidencias:
+  - dato: humedad_grano
+    op: GT
+    valor:
+      dato: humedad_equilibrio_maiz
+  - dato: hr_aire_exterior
+    op: LT
+    valor:
+      param: hr_aireacion_max
+  - dato: temperatura_aire_exterior
+    op: LTE
+    valor:
+      dato: temperatura_grano
+- id: R11
+  aplica_si:
+    contexto: tipo_almacenamiento
+    igual: NO_HERMETICO
+  si:
+    alguno:
+    - dato: humedad_grano
+      op: LTE
+      valor:
+        dato: humedad_equilibrio_maiz
+      descripcion: humedad del grano igual o menor que la de equilibrio
+    - dato: hr_aire_exterior
+      op: GTE
+      valor:
+        param: hr_aireacion_max
+      descripcion: aire exterior demasiado húmedo
+    - dato: lluvia_o_niebla
+      descripcion: lluvia o niebla
+    - dato: temperatura_aire_exterior
+      op: GT
+      valor:
+        dato: temperatura_grano
+      descripcion: aire exterior más cálido que el grano
+  entonces:
+    hallazgo: AIREACION_DESFAVORABLE
+    mensaje: 'El aire exterior no permite airear sin riesgo de rehumedecer o calentar
+      el grano: {soportes}. Con igualdad de humedad se adopta el criterio conservador.'
+  evidencias:
+  - dato: humedad_grano
+    op: LTE
+    valor:
+      dato: humedad_equilibrio_maiz
+  - dato: hr_aire_exterior
+    op: GTE
+    valor:
+      param: hr_aireacion_max
+  - dato: temperatura_aire_exterior
+    op: GT
+    valor:
+      dato: temperatura_grano
+- id: R12
+  aplica_si:
+    contexto: tipo_almacenamiento
+    igual: HERMETICO
+  si:
+    todos:
+    - hecho: HUMEDAD_APTA_BASE
+    - es_verdadero:
+        definicion: integridad_hermetica
+  entonces:
+    hallazgo: PROTECCION_HERMETICA_ACTIVA
+    mensaje: 'Barrera comprobada con humedad en condición base: mantener sellado y
+      usar control exterior. No demuestra eliminación de insectos.'
+  evidencias:
+  - dato: sello_integro
+    op: EQ
+    valor: true
+- id: R13
+  aplica_si:
+    contexto: tipo_almacenamiento
+    igual: HERMETICO
+  si:
+    alguno:
+    - negar:
+        dato: sello_integro
+      descripcion: sello no íntegro
+    - dato: perforacion_barrera
+      descripcion: barrera perforada
+    - dato: bolsa_abierta_sin_resellar
+      descripcion: envase abierto sin resellar
+    - negar:
+        dato: cierre_seguro
+      descripcion: cierre inseguro
+  entonces:
+    hallazgo: HERMETICIDAD_COMPROMETIDA
+    solicitudes:
+    - CORRECCION
+    mensaje: 'La barrera hermética no está íntegra ({soportes}): se invalidan la protección
+      y los controles internos heredados del sellado.'
+    accion:
+      codigo: CORREGIR
+      descripcion: Reparar o sustituir el recipiente y documentar el nuevo cierre.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: sello_integro
+    op: EQ
+    valor: false
+  - dato: perforacion_barrera
+    op: EQ
+    valor: true
+  - dato: bolsa_abierta_sin_resellar
+    op: EQ
+    valor: true
+- id: R14
+  si:
+    alguno:
+    - dato: insectos_vivos
+      descripcion: insectos vivos observados
+    - todos:
+      - dato: resultado_revision_plagas
+        op: EQ
+        valor: CONFIRMADA
+      - dato: revision_plagas_cubre_indicios_actuales
+      descripcion: revisión técnica confirmada
+  entonces:
+    hallazgo: INFESTACION_CONFIRMADA
+    mensaje: 'Infestación confirmada: {soportes}.'
+    accion:
+      codigo: REVISION_TECNICA
+      descripcion: Derivar a personal autorizado; no aplicar plaguicidas por cuenta
+        propia.
+      responsable: TECNICO
+  evidencias:
+  - dato: insectos_vivos
+    op: PRESENCIA
+    valor: true
+- id: R15
+  si:
+    definicion: indicio_r15_residual
+  entonces:
+    hallazgo: INFESTACION_SOSPECHADA
+    solicitudes:
+    - CORRECCION
+    mensaje: Hay indicios de insectos sin revisión que los descarte. La sospecha no
+      se convierte por sí sola en confirmación.
+    accion:
+      codigo: REVISION_TECNICA
+      descripcion: Registrar la revisión del episodio con su resultado.
+      responsable: TECNICO
+  evidencias:
+  - dato: granos_perforados
+    op: PRESENCIA
+    valor: true
+  - dato: polvillo_inusual
+    op: PRESENCIA
+    valor: true
+  - dato: exuvias_larvas
+    op: PRESENCIA
+    valor: true
+  - dato: ruido_alimentacion
+    op: PRESENCIA
+    valor: true
+- id: R16
+  aplica_si:
+    contexto: tipo_almacenamiento
+    igual: NO_HERMETICO
+  si:
+    todos:
+    - dato: temperatura_grano_aplicable
+      op: GTE
+      valor:
+        param: insectos_temperatura_min
+    - dato: temperatura_grano_aplicable
+      op: LTE
+      valor:
+        param: insectos_temperatura_max
+  entonces:
+    hallazgo: AMBIENTE_FAVORABLE_A_INSECTOS
+    solicitudes:
+    - MONITOREO
+    mensaje: 'Temperatura del grano entre {param:insectos_temperatura_min} y {param:insectos_temperatura_max}
+      °C: riesgo ambiental, no infestación.'
+  evidencias:
+  - dato: temperatura_grano_aplicable
+    op: GTE
+    valor:
+      param: insectos_temperatura_min
+- id: R17
+  si:
+    alguno:
+    - dato: heces_roedores_aves_entorno
+      descripcion: heces de roedores o aves
+    - dato: huellas
+      descripcion: huellas
+    - dato: bolsa_roida
+      descripcion: envase roído
+    - dato: grano_derramado_por_plaga
+      descripcion: grano derramado por plaga
+  entonces:
+    hallazgo: CONTAMINACION_BIOLOGICA_SOSPECHADA
+    mensaje: 'Signos de roedores o aves en el ámbito evaluado: {soportes}.'
+  evidencias:
+  - dato: heces_roedores_aves_entorno
+    op: PRESENCIA
+    valor: true
+  - dato: huellas
+    op: PRESENCIA
+    valor: true
+  - dato: bolsa_roida
+    op: PRESENCIA
+    valor: true
+  - dato: grano_derramado_por_plaga
+    op: PRESENCIA
+    valor: true
+- id: R18
+  si:
+    alguno:
+    - dato: moho_visible
+      descripcion: moho visible
+    - dato: olor_anormal
+      descripcion: olor anormal
+    - dato: condensacion_interna
+      descripcion: condensación interna
+    - dato: germinacion
+      descripcion: germinación
+  entonces:
+    hallazgo: DETERIORO_SOSPECHADO
+    mensaje: 'Indicio de deterioro del grano o del interior del envase: {soportes}.'
+  evidencias:
+  - dato: moho_visible
+    op: PRESENCIA
+    valor: true
+  - dato: olor_anormal
+    op: PRESENCIA
+    valor: true
+  - dato: condensacion_interna
+    op: PRESENCIA
+    valor: true
+  - dato: germinacion
+    op: PRESENCIA
+    valor: true
+- id: R19
+  si:
+    alguno:
+    - hecho: INFESTACION_CONFIRMADA
+    - hecho: CONTAMINACION_BIOLOGICA_SOSPECHADA
+    - hecho: CONTAMINACION_ANIMAL_OBSERVADA
+    - hecho: DETERIORO_SOSPECHADO
+    - episodio:
+      - CUARENTENA
+      descripcion: EPISODIO_CUARENTENA_ABIERTO
+  entonces:
+    hallazgo: CUARENTENA_SOLICITADA
+    solicitudes:
+    - CUARENTENA
+    mensaje: 'Separar el lote y remitir a evaluación competente: {soportes}. Prohibida
+      la mezcla y la salida para consumo sin evaluación.'
+    accion:
+      codigo: REVISION_TECNICA
+      descripcion: Separar físicamente el lote y abrir o mantener el episodio de cuarentena.
+      responsable: TECNICO
+- id: R20
+  si:
+    alguno:
+    - dato: suciedad_origen_animal
+      op: GT
+      valor:
+        param: suciedad_animal_max
+      descripcion: material de origen animal sobre el criterio
+    - dato: heces_visibles
+      descripcion: heces visibles en el producto
+  entonces:
+    hallazgo: CONTAMINACION_ANIMAL_OBSERVADA
+    mensaje: Material de origen animal observado o por encima del criterio de calidad
+      ({soportes}). No afirma confirmación microbiológica de laboratorio.
+  evidencias:
+  - dato: suciedad_origen_animal
+    op: GT
+    valor:
+      param: suciedad_animal_max
+  - dato: heces_visibles
+    op: PRESENCIA
+    valor: true
+- id: R21
+  si:
+    alguno:
+    - dato: granos_defectuosos
+      op: GT
+      valor:
+        param: defectuosos_max
+    - dato: granos_enfermos
+      op: GT
+      valor:
+        param: enfermos_max
+  entonces:
+    hallazgo: LOTE_NO_CONFORME_POR_DEFECTOS
+    solicitudes:
+    - CORRECCION
+    mensaje: Defectuosos o enfermos por encima del cribado comercial provisional.
+    accion:
+      codigo: CORREGIR
+      descripcion: Separar para revisión y clasificación.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: granos_defectuosos
+    op: GT
+    valor:
+      param: defectuosos_max
+  - dato: granos_enfermos
+    op: GT
+    valor:
+      param: enfermos_max
+- id: R22
+  si:
+    alguno:
+    - dato: granos_quebrados
+      op: GT
+      valor:
+        param: quebrados_max
+    - dato: materia_organica_extrana
+      op: GT
+      valor:
+        param: materia_organica_max
+    - dato: materia_inorganica_extrana
+      op: GT
+      valor:
+        param: materia_inorganica_max
+  entonces:
+    hallazgo: LOTE_REQUIERE_LIMPIEZA_Y_CLASIFICACION
+    solicitudes:
+    - CORRECCION
+    mensaje: Quebrados o materias extrañas por encima del cribado comercial provisional.
+    accion:
+      codigo: CORREGIR
+      descripcion: Limpiar o clasificar, tomar nueva muestra y reevaluar.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: granos_quebrados
+    op: GT
+    valor:
+      param: quebrados_max
+  - dato: materia_organica_extrana
+    op: GT
+    valor:
+      param: materia_organica_max
+  - dato: materia_inorganica_extrana
+    op: GT
+    valor:
+      param: materia_inorganica_max
+- id: R23
+  si:
+    alguno:
+    - negar:
+        dato: recipiente_limpio
+      descripcion: recipiente sucio
+    - negar:
+        dato: recipiente_seco
+      descripcion: recipiente húmedo
+    - negar:
+        dato: material_grado_alimentario
+      descripcion: material no alimentario
+    - negar:
+        dato: recipiente_resistente
+      descripcion: recipiente no resistente
+    - negar:
+        dato: cierre_seguro
+      descripcion: cierre inseguro
+  entonces:
+    hallazgo: RECIPIENTE_NO_APTO
+    solicitudes:
+    - SUSPENSION
+    mensaje: 'El recipiente incumple un requisito comprobado ({soportes}): no procede
+      la {ingreso?admisión|permanencia en el recipiente actual}.'
+    accion:
+      codigo: CORREGIR
+      descripcion: Reemplazar o acondicionar el recipiente.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: recipiente_limpio
+    op: EQ
+    valor: false
+  - dato: recipiente_seco
+    op: EQ
+    valor: false
+  - dato: material_grado_alimentario
+    op: EQ
+    valor: false
+  - dato: recipiente_resistente
+    op: EQ
+    valor: false
+  - dato: cierre_seguro
+    op: EQ
+    valor: false
+- id: R24
+  si:
+    alguno:
+    - dato: distancia_piso
+      op: LT
+      valor:
+        param: estiba_piso_min
+    - dato: distancia_pared
+      op: LT
+      valor:
+        param: estiba_pared_min
+    - dato: distancia_techo
+      op: LT
+      valor:
+        param: estiba_techo_min
+  entonces:
+    hallazgo: ESTIBA_NO_APTA
+    solicitudes:
+    - CORRECCION
+    mensaje: La estiba no conserva las separaciones mínimas a piso, pared o techo.
+    accion:
+      codigo: CORREGIR
+      descripcion: Reubicar la estiba y medir de nuevo.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: distancia_piso
+    op: LT
+    valor:
+      param: estiba_piso_min
+  - dato: distancia_pared
+    op: LT
+    valor:
+      param: estiba_pared_min
+  - dato: distancia_techo
+    op: LT
+    valor:
+      param: estiba_techo_min
+- id: R25
+  si:
+    alguno:
+    - negar:
+        vigente_meses: fecha_limpieza_general
+        meses: 1
+      descripcion: limpieza general vencida
+    - negar:
+        dato: limpieza_diaria
+      descripcion: sin limpieza diaria
+    - negar:
+        dato: limpieza_tras_operaciones
+      descripcion: sin limpieza tras operaciones
+    - implica:
+        si:
+          contexto: fase
+          igual: INGRESO
+        entonces:
+          negar:
+            dato: limpieza_previa_nuevo_lote
+      descripcion: sin limpieza previa al nuevo lote
+  entonces:
+    hallazgo: ALMACEN_NO_HIGIENICO
+    solicitudes:
+    - CORRECCION
+    mensaje: 'La limpieza exigible no está vigente o no se comprobó: {soportes}.'
+    accion:
+      codigo: CORREGIR
+      descripcion: Limpiar y registrar la verificación antes de autorizar.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: fecha_limpieza_general
+    op: VIGENCIA
+- id: R26
+  si:
+    alguno:
+    - dato: polvo_humo_gases_vapores
+      descripcion: polvo, humo, gases o vapores
+    - dato: quimicos_combustibles_en_almacen
+      descripcion: químicos o combustibles en el almacén
+  entonces:
+    hallazgo: CALIDAD_AIRE_INADECUADA
+    solicitudes:
+    - CORRECCION
+    mensaje: 'Hay contaminantes o productos incompatibles en el almacén de alimentos:
+      {soportes}.'
+    accion:
+      codigo: CORREGIR
+      descripcion: Retirar la fuente del área de alimentos y reevaluar.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: polvo_humo_gases_vapores
+    op: PRESENCIA
+    valor: true
+  - dato: quimicos_combustibles_en_almacen
+    op: PRESENCIA
+    valor: true
+- id: R29
+  etapa: tiempo
+  si:
+    alguno:
+    - calculo: vida_consumida
+      op: GTE
+      valor:
+        param: vida_limite
+      descripcion: vida consumida agotada
+    - calculo: vida_minima_documentada
+      op: GTE
+      valor:
+        param: vida_limite
+      descripcion: vida mínima documentada agotada
+    - todos:
+      - contexto: clima_calido
+      - contexto: tipo_almacenamiento
+        igual: NO_HERMETICO
+      - calculo: dias_almacenados
+        op: GTE
+        valor:
+          param: limite_calido_dias
+      descripcion: plazo máximo en clima cálido sin hermeticidad
+  entonces:
+    hallazgo: VIDA_O_PLAZO_AGOTADO
+    solicitudes:
+    - SUSPENSION
+    mensaje: El tiempo de referencia del modelo está agotado o se superó el plazo
+      máximo en clima cálido sin hermeticidad ({soportes}). Secar o enfriar no reinicia
+      el acumulado.
+    accion:
+      codigo: EVALUAR_DISPOSICION
+      descripcion: Evaluar disposición técnica del lote; no se ordena consumo ni destrucción.
+      responsable: TECNICO
+- id: R28
+  etapa: aviso_tiempo
+  si:
+    todos:
+    - negar:
+        hecho: VIDA_O_PLAZO_AGOTADO
+    - calculo: vida_consumida
+      op: GTE
+      valor:
+        param: vida_alerta
+    - calculo: vida_consumida
+      op: LT
+      valor:
+        param: vida_limite
+  entonces:
+    hallazgo: VIDA_ESTIMADA_PROXIMA_AL_LIMITE
+    solicitudes:
+    - MONITOREO
+    mensaje: La fracción consumida del tiempo de referencia es {calculo:vida_consumida},
+      dentro del aviso preventivo de {param:vida_alerta}.
+- id: R27
+  etapa: control
+  si:
+    alguno:
+    - definicion: plazo_ingreso_vencido
+    - definicion: plazo_grano_vencido
+    - definicion: plazo_exterior_vencido
+    - definicion: plazo_almacen_vencido
+  entonces:
+    hallazgo: CONTROL_ATRASADO
+    solicitudes:
+    - CORRECCION
+    mensaje: 'Control fuera de plazo: {soportes}. Una inspección exterior no cuenta
+      como muestreo interno.'
+    accion:
+      codigo: INSPECCIONAR
+      descripcion: Completar la inspección requerida.
+      responsable: PRODUCTOR
+- id: R27-evento
+  regla: R27
+  etapa: control
+  si:
+    es_verdadero:
+      dato: hay_evento_que_invalida_control
+  entonces:
+    hallazgo: CONTROL_INVALIDADO_POR_EVENTO
+    solicitudes:
+    - CORRECCION
+    mensaje: 'Un evento posterior invalidó los controles: la lista favorable anterior
+      ya no describe la situación.'
+- id: S6-plazo
+  regla: SECCION_6
+  etapa: consolidacion
+  si:
+    es_falso:
+      calculo: plazo_compatible
+  entonces:
+    hallazgo: PLAZO_INCOMPATIBLE
+    solicitudes:
+    - CORRECCION
+    mensaje: El plazo previsto no es compatible con el tiempo de referencia restante.
+      Reducir el plazo o reevaluar; no significa que la vida actual esté agotada.
+- id: S6-estimacion
+  regla: SECCION_6
+  etapa: consolidacion
+  si:
+    calculo: estimacion_hermetica
+  entonces:
+    hallazgo: ESTIMACION_HERMETICA_APLICADA
+    solicitudes:
+    - MONITOREO
+    mensaje: 'Temperatura estimada sin apertura del recipiente: exige monitoreo y
+      no es una medición interna.'
+- id: R02-monitoreo
+  regla: R02
+  etapa: consolidacion
+  registrar_motivo: false
+  si:
+    todos:
+    - hecho: HUMEDAD_CONDICIONAL
+    - es_verdadero:
+        definicion: rama_condicional_admisible
+  entonces:
+    solicitudes:
+    - MONITOREO
+- id: R30.4-banda
+  regla: R30.4
+  etapa: consolidacion
+  si:
+    todos:
+    - hecho: HUMEDAD_CONDICIONAL
+    - es_falso:
+        definicion: rama_condicional_admisible
+  entonces:
+    hallazgo: BANDA_CONDICIONAL_NO_ADMISIBLE
+    solicitudes:
+    - CORRECCION
+    mensaje: 'La banda condicional no es admisible: {fallidas:rama_condicional_admisible}.'
+- id: S71-incidencia
+  regla: SECCION_7_1
+  etapa: consolidacion
+  si:
+    episodio:
+    - REVISION_PLAGAS
+    - REVISION_TERMICA
+    - CORRECCION
+  entonces:
+    hallazgo: INCIDENCIA_DE_REVISION_ABIERTA
+    solicitudes:
+    - CORRECCION
+    mensaje: 'Hay una incidencia de revisión abierta: la unidad no se autoriza hasta
+      resolverla.'
+- id: S5-plan
+  regla: SECCION_5
+  etapa: consolidacion
+  si:
+    todos:
+    - solicitud: MONITOREO
+    - negar:
+        calculo: plan_vigente
+  entonces:
+    hallazgo: PLAN_DE_MONITOREO_AUSENTE
+    solicitudes:
+    - CORRECCION
+    mensaje: Se requiere monitoreo reforzado y no hay un plan registrado y vigente.
+- id: R30.4-fase
+  regla: R30.4
+  etapa: consolidacion
+  si:
+    todos:
+    - solicitud: SUSPENSION
+    - negar:
+        contexto: fase
+        definido: true
+  entonces:
+    hallazgo: FASE_DESCONOCIDA_CON_SUSPENSION
+    solicitudes:
+    - CORRECCION
+    mensaje: Almacenamiento normal no permitido hasta definir la fase y la actuación.
+- id: R31
+  si:
+    dato: filtracion_agua_almacen
+  entonces:
+    hallazgo: INFRAESTRUCTURA_CON_FILTRACION
+    solicitudes:
+    - CORRECCION
+    mensaje: 'Filtración de agua observada en el almacén: reparar filtración, verificar
+      estanqueidad e inspeccionar unidades expuestas.'
+    accion:
+      codigo: CORREGIR
+      descripcion: Reparar la filtración, verificar estanqueidad e inspeccionar las
+        unidades expuestas.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: filtracion_agua_almacen
+    op: PRESENCIA
+    valor: true
+- id: R32
+  si:
+    dato: drenaje_obstruido
+  entonces:
+    hallazgo: DRENAJE_DEFICIENTE
+    solicitudes:
+    - CORRECCION
+    mensaje: 'Drenaje obstruido en el almacén: despejar drenaje y comprobar que no
+      entra agua.'
+    accion:
+      codigo: CORREGIR
+      descripcion: Despejar el drenaje e inspeccionar unidades potencialmente afectadas.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: drenaje_obstruido
+    op: PRESENCIA
+    valor: true
+- id: R33
+  si:
+    alguno:
+    - dato: malla_ventana_danada
+    - dato: abertura_ingreso_plagas
+  entonces:
+    hallazgo: BARRERA_ANTIPLAGAS_DEFICIENTE
+    solicitudes:
+    - CORRECCION
+    mensaje: 'Barrera contra plagas deficiente (malla de ventana dañada o abertura
+      de ingreso): reparar e inspeccionar presencia de plagas.'
+    accion:
+      codigo: CORREGIR
+      descripcion: Reparar la abertura o malla dañada e inspeccionar presencia de
+        plagas.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: malla_ventana_danada
+    op: PRESENCIA
+    valor: true
+  - dato: abertura_ingreso_plagas
+    op: PRESENCIA
+    valor: true
+- id: R34
+  si:
+    alguno:
+    - dato: agua_estancada_entorno
+    - dato: residuos_o_maleza_entorno
+  entonces:
+    hallazgo: ENTORNO_NO_HIGIENICO
+    solicitudes:
+    - CORRECCION
+    mensaje: 'Entorno no higiénico alrededor del almacén (agua estancada o maleza/residuos):
+      limpiar y eliminar focos.'
+    accion:
+      codigo: CORREGIR
+      descripcion: Limpiar y eliminar focos de agua y residuos en el entorno del almacén.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: agua_estancada_entorno
+    op: PRESENCIA
+    valor: true
+  - dato: residuos_o_maleza_entorno
+    op: PRESENCIA
+    valor: true
+- id: R35
+  si:
+    alguno:
+    - dato: sacos_usados_o_desechos_en_almacen
+    - dato: residuos_de_proceso_sin_retirar
+  entonces:
+    hallazgo: MATERIAL_RESIDUAL_EN_ALMACEN
+    solicitudes:
+    - CORRECCION
+    mensaje: 'Material residual o sacos usados/desechos acumulados en el almacén:
+      retirar, limpiar y registrar inspección.'
+    accion:
+      codigo: CORREGIR
+      descripcion: Retirar sacos usados y residuos de proceso del almacén.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: sacos_usados_o_desechos_en_almacen
+    op: PRESENCIA
+    valor: true
+  - dato: residuos_de_proceso_sin_retirar
+    op: PRESENCIA
+    valor: true
+- id: R36
+  si:
+    dato: humedad_por_agua_en_unidad
+  entonces:
+    hallazgo: UNIDAD_EXPUESTA_A_AGUA
+    solicitudes:
+    - CUARENTENA
+    mensaje: 'La unidad presenta humedad por contacto directo con agua: aislar la
+      unidad y solicitar cuarentena preventiva.'
+    accion:
+      codigo: REVISION_TECNICA
+      descripcion: Aislar la unidad, medir nuevamente humedad y revisar signos de
+        deterioro.
+      responsable: TECNICO
+  evidencias:
+  - dato: humedad_por_agua_en_unidad
+    op: PRESENCIA
+    valor: true
+- id: R37
+  si:
+    dato: paleta_danada_o_con_salientes
+  entonces:
+    hallazgo: PALETA_NO_APTA
+    solicitudes:
+    - CORRECCION
+    mensaje: 'Paleta dañada o con salientes/clavos expuestos: sustituir o reparar
+      e inspeccionar posibles perforaciones.'
+    accion:
+      codigo: CORREGIR
+      descripcion: Sustituir o reparar la paleta e inspeccionar integridad de los
+        envases.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: paleta_danada_o_con_salientes
+    op: PRESENCIA
+    valor: true
+- id: R38
+  si:
+    alguno:
+    - dato: estiba_inestable
+    - dato: altura_supera_limite_proveedor
+  entonces:
+    hallazgo: ESTIBA_INSEGURA
+    solicitudes:
+    - CORRECCION
+    mensaje: 'Estiba inestable o altura superior al límite especificado: reestibar
+      y asegurar estabilidad.'
+    accion:
+      codigo: CORREGIR
+      descripcion: Reestibar y verificar estabilidad y límites de altura del proveedor.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: estiba_inestable
+    op: PRESENCIA
+    valor: true
+  - dato: altura_supera_limite_proveedor
+    op: PRESENCIA
+    valor: true
+- id: R39
+  si:
+    alguno:
+    - dato: pasillo_inspeccion_obstruido
+    - todos:
+      - aportado: distancia_entre_estantes
+      - dato: distancia_entre_estantes
+        op: LT
+        valor: 1.0
+  entonces:
+    hallazgo: ACCESO_INSPECCION_INSUFICIENTE
+    solicitudes:
+    - CORRECCION
+    mensaje: 'Pasillo de inspección obstruido o distancia entre estantes menor a 1,00
+      m: liberar acceso.'
+    accion:
+      codigo: CORREGIR
+      descripcion: Liberar pasillos de inspección y asegurar distancia mínima de 1
+        m entre estantes.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: pasillo_inspeccion_obstruido
+    op: PRESENCIA
+    valor: true
+  - dato: distancia_entre_estantes
+    op: LT
+    valor: 1.0
+- id: R40
+  si:
+    es_falso:
+      dato: identificacion_unidad_legible
+  entonces:
+    hallazgo: IDENTIDAD_DE_UNIDAD_NO_VERIFICABLE
+    solicitudes:
+    - CORRECCION
+    mensaje: 'Identificación de la unidad ilegible o no verificable: conciliar etiqueta,
+      lote y registro.'
+    accion:
+      codigo: CORREGIR
+      descripcion: Conciliar etiqueta, lote y registro antes de autorizar movimientos
+        o salida.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: identificacion_unidad_legible
+    op: EQ
+    valor: false
+- id: R41
+  si:
+    es_falso:
+      dato: registro_trazabilidad_completo
+  entonces:
+    hallazgo: TRAZABILIDAD_INCOMPLETA
+    solicitudes:
+    - CORRECCION
+    mensaje: 'Registro de trazabilidad incompleto: completar procedencia, lote, entrada,
+      movimientos y destino.'
+    accion:
+      codigo: CORREGIR
+      descripcion: Completar la información obligatoria de trazabilidad de la unidad.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: registro_trazabilidad_completo
+    op: EQ
+    valor: false
+- id: R42
+  si:
+    dato: movimiento_sin_registro
+  entonces:
+    hallazgo: HISTORIAL_DE_UBICACION_INCIERTO
+    solicitudes:
+    - CORRECCION
+    mensaje: 'Movimiento de la unidad realizado sin registro: reconstruir fecha, origen,
+      destino y responsable.'
+    accion:
+      codigo: CORREGIR
+      descripcion: Reconstruir registro de movimiento e inspeccionar la unidad si
+        la exposición es incierta.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: movimiento_sin_registro
+    op: PRESENCIA
+    valor: true
+- id: R43
+  si:
+    dato: contacto_con_unidad_en_cuarentena
+  entonces:
+    hallazgo: POSIBLE_CONTAMINACION_CRUZADA
+    solicitudes:
+    - CUARENTENA
+    mensaje: 'Contacto comprobado con una unidad en cuarentena: abrir episodio de
+      cuarentena preventiva por riesgo de contaminación cruzada.'
+    accion:
+      codigo: REVISION_TECNICA
+      descripcion: Aislar la unidad expuesta y documentar contacto real para evaluación
+        técnica.
+      responsable: TECNICO
+  evidencias:
+  - dato: contacto_con_unidad_en_cuarentena
+    op: PRESENCIA
+    valor: true
+- id: R44
+  si:
+    todos:
+    - episodio:
+      - CUARENTENA
+    - es_falso:
+        dato: separacion_cuarentena_verificada
+  entonces:
+    hallazgo: AISLAMIENTO_INSUFICIENTE
+    solicitudes:
+    - CORRECCION
+    mensaje: Unidad con cuarentena abierta pero sin verificación de aislamiento físico
+      o señalización adecuada.
+    accion:
+      codigo: CORREGIR
+      descripcion: Separar físicamente, señalizar y registrar la verificación del
+        aislamiento.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: separacion_cuarentena_verificada
+    op: EQ
+    valor: false
+- id: R45
+  si:
+    dato: derrame_grano_en_piso
+  entonces:
+    hallazgo: DERRAME_DE_GRANO_REGISTRADO
+    solicitudes:
+    - CORRECCION
+    mensaje: 'Derrame de grano en piso observado: segregar el grano derramado del
+      lote y registrar cantidad.'
+    accion:
+      codigo: CORREGIR
+      descripcion: Separar el grano caído y evaluar limpieza antes de cualquier reincorporación.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: derrame_grano_en_piso
+    op: PRESENCIA
+    valor: true
+- id: R46
+  si:
+    dato: grano_derramado_reincorporado
+  entonces:
+    hallazgo: REINCORPORACION_NO_VERIFICADA
+    solicitudes:
+    - CUARENTENA
+    mensaje: 'Grano derramado en piso reincorporado a la unidad sin verificación técnica
+      documentada: cuarentena preventiva.'
+    accion:
+      codigo: REVISION_TECNICA
+      descripcion: Aislar la unidad mezclada, reconstruir la cantidad y pedir dictamen
+        técnico.
+      responsable: TECNICO
+  evidencias:
+  - dato: grano_derramado_reincorporado
+    op: PRESENCIA
+    valor: true
+- id: R47
+  si:
+    dato: rotacion_no_justificada
+  entonces:
+    hallazgo: ROTACION_NO_JUSTIFICADA
+    mensaje: Se programa salida de un lote posterior teniendo lote anterior apto pendiente
+      de salida sin motivo registrado (aviso de despacho).
+    accion:
+      codigo: REVISION_TECNICA
+      descripcion: Revisar orden de salida de lotes en el flujo de despacho.
+      responsable: TECNICO
+  evidencias:
+  - dato: rotacion_no_justificada
+    op: PRESENCIA
+    valor: true
+- id: R48
+  si:
+    dato: alimentos_olor_incompatible_en_contacto
+  entonces:
+    hallazgo: RIESGO_TRANSFERENCIA_OLOR
+    solicitudes:
+    - CORRECCION
+    mensaje: 'Alimentos u objetos de olor incompatible en contacto o proximidad: separar
+      e inspeccionar olor del grano.'
+    accion:
+      codigo: CORREGIR
+      descripcion: Separar alimentos incompatibles e inspeccionar olor de la unidad.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: alimentos_olor_incompatible_en_contacto
+    op: PRESENCIA
+    valor: true
+- id: R49
+  si:
+    es_falso:
+      dato: programa_control_plagas_documentado
+  entonces:
+    hallazgo: GESTION_PREVENTIVA_PLAGAS_INCOMPLETA
+    solicitudes:
+    - CORRECCION
+    mensaje: 'Programa de control y prevención de plagas no documentado: registrar
+      responsable, controles y prestador autorizado.'
+    accion:
+      codigo: CORREGIR
+      descripcion: Documentar el programa de control preventivo de plagas.
+      responsable: PRODUCTOR
+  evidencias:
+  - dato: programa_control_plagas_documentado
+    op: EQ
+    valor: false
+- id: R50
+  si:
+    dato: aplicacion_plaguicida_sin_registro_competente
+  entonces:
+    hallazgo: TRATAMIENTO_NO_VERIFICABLE
+    solicitudes:
+    - CUARENTENA
+    mensaje: 'Aplicación de plaguicida sin registro técnico competente: retener unidades
+      hasta revisar producto, dosis y carencia.'
+    accion:
+      codigo: REVISION_TECNICA
+      descripcion: Retener las unidades tratadas hasta revisar producto, responsable
+        y período de carencia.
+      responsable: TECNICO
+  evidencias:
+  - dato: aplicacion_plaguicida_sin_registro_competente
+    op: PRESENCIA
+    valor: true
+- id: R51
+  si:
+    dato: exposicion_quimica_del_grano
+  entonces:
+    hallazgo: CONTACTO_QUIMICO_SOSPECHADO
+    solicitudes:
+    - CUARENTENA
+    mensaje: 'Exposición directa o contacto químico sospechado en el grano: segregar
+      unidad y solicitar evaluación competente.'
+    accion:
+      codigo: REVISION_TECNICA
+      descripcion: Segregar la unidad afectada y remitir a evaluación toxicológica
+        competente.
+      responsable: TECNICO
+  evidencias:
+  - dato: exposicion_quimica_del_grano
+    op: PRESENCIA
+    valor: true
+- id: R52
+  si:
+    todos:
+    - dato: vencimiento_aplicable
+    - vencido_dias: fecha_vencimiento_producto
+      dias: 0
+  entonces:
+    hallazgo: PRODUCTO_VENCIDO
+    solicitudes:
+    - SUSPENSION
+    mensaje: 'Fecha de vencimiento comercial del producto superada: suspender almacenamiento
+      normal y gestionar disposición técnica.'
+    accion:
+      codigo: EVALUAR_DISPOSICION
+      descripcion: Gestionar disposición técnica del producto vencido mediante evaluación
+        competente.
+      responsable: TECNICO
+  evidencias:
+  - dato: fecha_vencimiento_producto
+    op: VIGENCIA
+datos_exigibles:
+- cuando_desconocido:
+    definicion: medicion_confirmada
+  campos:
+  - humedad_grano
+  - metodo_humedad
+  - equipo_humedad_verificado
+  - muestra_representativa
+  - procedimiento_medicion_cumplido
+  motivo: Falta para confirmar la medición de humedad.
+- cuando_desconocido:
+    definicion: recipiente_apto
+  campos:
+  - recipiente_limpio
+  - recipiente_seco
+  - material_grado_alimentario
+  - recipiente_resistente
+  - cierre_seguro
+  motivo: Falta para comprobar el recipiente.
+- cuando_desconocido:
+    definicion: estiba_apta
+  campos:
+  - distancia_piso
+  - distancia_pared
+  - distancia_techo
+  motivo: Falta para comprobar la estiba.
+- cuando_desconocido:
+    definicion: calidad_aire_adecuada
+  campos:
+  - polvo_humo_gases_vapores
+  - quimicos_combustibles_en_almacen
+  motivo: Falta para comprobar la calidad del aire.
+- cuando_desconocido:
+    definicion: calidad_fisica_conforme
+  campos:
+  - suciedad_origen_animal
+  - heces_visibles
+  - granos_defectuosos
+  - granos_enfermos
+  - granos_quebrados
+  - materia_organica_extrana
+  - materia_inorganica_extrana
+  motivo: Falta para comprobar la calidad física.
+- cuando_desconocido:
+    definicion: sin_evidencia_de_plagas
+  campos:
+  - insectos_vivos
+  - heces_roedores_aves_entorno
+  - huellas
+  - bolsa_roida
+  - grano_derramado_por_plaga
+  - granos_perforados
+  - polvillo_inusual
+  - exuvias_larvas
+  - ruido_alimentacion
+  motivo: Falta para descartar plagas.
+- cuando_desconocido:
+    definicion: sin_evidencia_de_deterioro
+  campos:
+  - moho_visible
+  - olor_anormal
+  - condensacion_interna
+  - germinacion
+  motivo: Falta para descartar deterioro.
+- cuando_desconocido:
+    definicion: almacen_higienico
+  campos:
+  - fecha_limpieza_general
+  - limpieza_diaria
+  - limpieza_tras_operaciones
+  - limpieza_previa_nuevo_lote
+  motivo: Falta para comprobar la higiene del almacén.
+- cuando_desconocido:
+    definicion: ambiente_base_apto
+  campos:
+  - temperatura_almacen
+  - hr_almacen
+  motivo: Falta para comprobar el ambiente del almacén.
+- cuando_desconocido:
+    definicion: aw_sin_alerta
+  campos:
+  - aw_medida
+  - actividad_agua
+  motivo: Falta para resolver la actividad de agua.
+- cuando_desconocido:
+    definicion: temperatura_bajo_alerta
+  campos:
+  - temperatura_grano
+  motivo: Falta para comprobar la temperatura del grano.
+- cuando:
+    contexto: tipo_almacenamiento
+    igual: HERMETICO
+  campos:
+  - sello_integro
+  - cierre_seguro
+  - perforacion_barrera
+  - bolsa_abierta_sin_resellar
+  motivo: Falta para comprobar la barrera hermética.
+- cuando_desconocido:
+    definicion: plazo_ingreso_vencido
+  pendiente:
+    campo: ingreso_inspeccionado
+    motivo: No hay registro del control ingreso.
+    paso: 5
+- cuando_desconocido:
+    definicion: plazo_grano_vencido
+  pendiente:
+    campo: fecha_inspeccion_grano
+    motivo: No hay registro del control inspeccion_grano.
+    paso: 5
+- cuando_desconocido:
+    definicion: plazo_exterior_vencido
+  pendiente:
+    campo: fecha_inspeccion_exterior
+    motivo: No hay registro del control inspeccion_exterior.
+    paso: 5
+- cuando_desconocido:
+    definicion: plazo_almacen_vencido
+  pendiente:
+    campo: fecha_control_almacen
+    motivo: No hay registro del control control_almacen.
+    paso: 5
+- cuando:
+    nulo: vida_consumida
+  pendientes_del_calculo: vida_consumida
+- cuando:
+    nulo: tiempo_referencia_actual
+  pendiente:
+    campo: tiempo_referencia_actual
+    motivo: 'No hay celda de referencia aplicable: el cálculo no está disponible.'
+    paso: 5
+- cuando:
+    nulo: dias_previstos_restantes
+  pendiente:
+    campo: dias_previstos_restantes
+    motivo: Falta el plazo previsto.
+    paso: 5
+- cuando:
+    todos:
+    - nulo: fecha_salida_prevista
+    - negar:
+        nulo: dias_previstos_restantes
+  pendiente:
+    campo: fecha_salida_prevista
+    motivo: Falta la fecha de salida.
+    paso: 5
+- cuando:
+    negar:
+      contexto: tipo_almacenamiento
+      definido: true
+  pendiente:
+    campo: tipo_almacenamiento
+    motivo: Falta la modalidad.
+    paso: 1
+- cuando:
+    negar:
+      contexto: fase
+      definido: true
+  pendiente:
+    campo: fase
+    motivo: Falta la fase de la evaluación.
+    paso: 1
+- cuando_desconocido:
+    contexto: clima_calido
+  pendiente:
+    campo: clima_calido
+    motivo: Falta la clasificación territorial de clima.
+    paso: 1
+- cuando_desconocido:
+    calculo: plazo_compatible
+  pendiente:
+    campo: plazo_compatible
+    motivo: No hay datos suficientes para comprobar el plazo.
+    paso: 5
+- cuando:
+    siempre: true
+  campos: *id002
+  motivo: Comprobación necesaria de la ampliación R31–R52; registrar observación o
+    NO_APLICA permitido.
+- cuando:
+    dato: vencimiento_aplicable
+  campos:
+  - fecha_vencimiento_producto
+  motivo: El vencimiento comercial aplicable requiere fecha documentada.
+- cuando:
+    episodio:
+    - CUARENTENA
+  campos:
+  - separacion_cuarentena_verificada
+  motivo: Documentar el aislamiento de la unidad en cuarentena.
+resolucion:
+- rama: R30.1
+  decision: CUARENTENA
+  si:
+    solicitud: CUARENTENA
+- rama: R30.2
+  decision: BLOQUEAR_INGRESO
+  si:
+    todos:
+    - solicitud: SUSPENSION
+    - contexto: fase
+      igual: INGRESO
+- rama: R30.3
+  decision: RETIRAR_LOTE
+  si:
+    todos:
+    - solicitud: SUSPENSION
+    - contexto: fase
+      igual: SEGUIMIENTO
+- rama: R30.4
+  decision: CORREGIR_Y_REEVALUAR
+  si:
+    solicitud: CORRECCION
+- rama: R30.5
+  decision: SIN_CONCLUSION_AUTOMATICA
+  si:
+    pendientes: true
+- rama: R30.6
+  decision: AUTORIZAR_CON_MONITOREO
+  si:
+    todos:
+    - es_verdadero:
+        definicion: condiciones_comunes_aptas
+      descripcion: condiciones comunes aptas
+    - es_verdadero:
+        calculo: plazo_compatible
+      descripcion: plazo compatible
+    - es_verdadero:
+        definicion: rama_condicional_admisible
+      descripcion: banda condicional admisible
+- rama: R30.7
+  decision: AUTORIZAR_CON_MONITOREO
+  si:
+    todos:
+    - es_verdadero:
+        definicion: condiciones_comunes_aptas
+      descripcion: condiciones comunes aptas
+    - es_verdadero:
+        calculo: plazo_compatible
+      descripcion: plazo compatible
+    - hecho: HUMEDAD_APTA_BASE
+      descripcion: humedad en condición base
+    - es_verdadero:
+        definicion: proteccion_requerida
+      descripcion: protección requerida satisfecha
+    - solicitud: MONITOREO
+      descripcion: monitoreo reforzado solicitado
+    - es_verdadero:
+        calculo: plan_vigente
+      descripcion: plan de monitoreo vigente
+- rama: R30.8
+  decision: AUTORIZAR_ALMACENAMIENTO
+  si:
+    todos:
+    - es_verdadero:
+        definicion: condiciones_comunes_aptas
+      descripcion: condiciones comunes aptas
+    - es_verdadero:
+        calculo: plazo_compatible
+      descripcion: plazo compatible
+    - hecho: HUMEDAD_APTA_BASE
+      descripcion: humedad en condición base
+    - es_verdadero:
+        definicion: proteccion_requerida
+      descripcion: protección requerida satisfecha
+    - negar:
+        solicitud: MONITOREO
+      descripcion: sin motivos de monitoreo especial
+- rama: R30.9
+  decision: SIN_CONCLUSION_AUTOMATICA
+  si:
+    siempre: true
+  mensaje: 'No hay una fila aplicable: se informa la condición que impide resolver
+    y se deriva a revisión.'
+decisiones_autorizadas:
+- AUTORIZAR_ALMACENAMIENTO
+- AUTORIZAR_CON_MONITOREO
+difuso:
+  tipo: MAMDANI_TIPO_1
+  estructura: MULTIVARIABLE
+  operadores:
+    AND: MIN
+    OR: MAX
+    implicacion: MIN
+    agregacion: MAX
+    defuzzificacion: CENTROIDE_EXACTO
+  politica:
+    monitoreo_desde: 35
+    correccion_desde: 65
+    fundamento: 'POLITICA_PROTOTIPO: cortes de severidad, no probabilidades ni límites
+      publicados.'
+  salidas:
+    bajo:
+    - 0
+    - 0
+    - 10
+    - 25
+    medio:
+    - 20
+    - 50
+    - 80
+    alto:
+    - 70
+    - 85
+    - 100
+    - 100
+  modulos:
+  - id: condiciones_almacenamiento
+    nombre: Condiciones conjuntas de almacenamiento
+    origen: R02
+    origenes:
+    - R02
+    - R07
+    - R08
+    - R21
+    entradas:
+      humedad_grano:
+        id: humedad_grano
+        nombre: Humedad del grano
+        origen: R02
+        unidad: '% b.h.'
+        entrada:
+          tipo: dato
+          campo: humedad_grano
+        dominio:
+        - 0
+        - 100
+        conjuntos:
+          bajo:
+          - 0
+          - 0
+          - 12.5
+          - 13
+          medio:
+          - 12.5
+          - 13
+          - 13.5
+          alto:
+          - 13
+          - 13.5
+          - 100
+          - 100
+        referencia: 13
+        fundamento_transicion: 'POLITICA_PROTOTIPO: transición ±0.5 % b.h. alrededor
+          de 13; pendiente de calibración agronómica.'
+        valido_si:
+          definicion: medicion_confirmada
+      temperatura_grano:
+        id: temperatura_grano
+        nombre: Temperatura del grano
+        origen: R08
+        unidad: °C
+        entrada:
+          tipo: dato
+          campo: temperatura_grano
+        dominio:
+        - -30
+        - 90
+        conjuntos:
+          bajo:
+          - -30
+          - -30
+          - 20
+          - 25
+          medio:
+          - 20
+          - 25
+          - 30
+          alto:
+          - 25
+          - 30
+          - 90
+          - 90
+        referencia: 25
+        fundamento_transicion: 'POLITICA_PROTOTIPO: transición ±5 °C alrededor de
+          25; pendiente de calibración agronómica.'
+      hr_almacen:
+        id: hr_almacen
+        nombre: Humedad relativa del almacén
+        origen: R07
+        unidad: '% HR'
+        entrada:
+          tipo: dato
+          campo: hr_almacen
+        dominio:
+        - 0
+        - 100
+        conjuntos:
+          bajo:
+          - 0
+          - 0
+          - 50
+          - 60
+          medio:
+          - 50
+          - 60
+          - 70
+          alto:
+          - 60
+          - 70
+          - 100
+          - 100
+        referencia: 60
+        fundamento_transicion: 'POLITICA_PROTOTIPO: transición ±10 % HR alrededor
+          de 60; pendiente de calibración agronómica.'
+        aplica_si: &id003
+          contexto: tipo_almacenamiento
+          igual: NO_HERMETICO
+      granos_defectuosos:
+        id: granos_defectuosos
+        nombre: Granos defectuosos
+        origen: R21
+        unidad: '% masa'
+        entrada:
+          tipo: dato
+          campo: granos_defectuosos
+        dominio:
+        - 0
+        - 100
+        conjuntos:
+          bajo:
+          - 0
+          - 0
+          - 6
+          - 7
+          medio:
+          - 6
+          - 7
+          - 8
+          alto:
+          - 7
+          - 8
+          - 100
+          - 100
+        referencia: 7
+        fundamento_transicion: 'POLITICA_PROTOTIPO: transición ±1 % masa alrededor
+          de 7; pendiente de calibración agronómica.'
+    reglas:
+    - id: D01
+      si:
+        todos:
+        - entrada: humedad_grano
+          conjunto: bajo
+        - entrada: temperatura_grano
+          conjunto: bajo
+        - entrada: hr_almacen
+          conjunto: bajo
+        - entrada: granos_defectuosos
+          conjunto: bajo
+      entonces: bajo
+      aplica_si: *id003
+    - id: D02
+      si:
+        todos:
+        - entrada: humedad_grano
+          conjunto: bajo
+        - entrada: temperatura_grano
+          conjunto: bajo
+        - entrada: granos_defectuosos
+          conjunto: bajo
+      entonces: bajo
+      aplica_si:
+        contexto: tipo_almacenamiento
+        igual: HERMETICO
+    - id: D03
+      si:
+        alguno:
+        - entrada: humedad_grano
+          conjunto: medio
+        - entrada: temperatura_grano
+          conjunto: medio
+        - entrada: granos_defectuosos
+          conjunto: medio
+      entonces: medio
+    - id: D04
+      si:
+        entrada: hr_almacen
+        conjunto: medio
+      entonces: medio
+      aplica_si: *id003
+    - id: D05
+      si:
+        alguno:
+        - entrada: humedad_grano
+          conjunto: alto
+        - entrada: temperatura_grano
+          conjunto: alto
+        - entrada: granos_defectuosos
+          conjunto: alto
+      entonces: alto
+    - id: D06
+      si:
+        entrada: hr_almacen
+        conjunto: alto
+      entonces: alto
+      aplica_si: *id003
+    - id: D07
+      si:
+        todos:
+        - entrada: humedad_grano
+          conjunto: medio
+        - entrada: temperatura_grano
+          conjunto: medio
+      entonces: alto
+    - id: D08
+      si:
+        todos:
+        - entrada: humedad_grano
+          conjunto: medio
+        - entrada: hr_almacen
+          conjunto: medio
+      entonces: alto
+      aplica_si: *id003
+    - id: D09
+      si:
+        todos:
+        - entrada: temperatura_grano
+          conjunto: medio
+        - entrada: hr_almacen
+          conjunto: medio
+      entonces: alto
+      aplica_si: *id003
+    fundamento_transicion: 'POLITICA_PROTOTIPO: severidad conjunta; las interacciones
+      medias D07–D09 refuerzan la prevención. Las fuentes respaldan variables y referencias,
+      no estas nueve reglas ni sus curvas.'
+  cobertura:
+    R01: RESTRICCION_O_CONTEXTO
+    R02: MAMDANI_Y_RESTRICCION
+    R03: RESTRICCION_O_CONTEXTO
+    R04: RESTRICCION_O_CONTEXTO
+    R05: RESTRICCION_O_CONTEXTO
+    R06: RESTRICCION_O_CONTEXTO
+    R07: MAMDANI_Y_RESTRICCION
+    R08: MAMDANI_Y_RESTRICCION
+    R09: RESTRICCION_O_CONTEXTO
+    R10: RESTRICCION_O_CONTEXTO
+    R11: RESTRICCION_O_CONTEXTO
+    R12: RESTRICCION_O_CONTEXTO
+    R13: RESTRICCION_O_CONTEXTO
+    R14: RESTRICCION_O_CONTEXTO
+    R15: RESTRICCION_O_CONTEXTO
+    R16: RESTRICCION_O_CONTEXTO
+    R17: RESTRICCION_O_CONTEXTO
+    R18: RESTRICCION_O_CONTEXTO
+    R19: RESTRICCION_O_CONTEXTO
+    R20: RESTRICCION_O_CONTEXTO
+    R21: MAMDANI_Y_RESTRICCION
+    R22: RESTRICCION_O_CONTEXTO
+    R23: RESTRICCION_O_CONTEXTO
+    R24: RESTRICCION_O_CONTEXTO
+    R25: RESTRICCION_O_CONTEXTO
+    R26: RESTRICCION_O_CONTEXTO
+    R27: RESTRICCION_O_CONTEXTO
+    R28: RESTRICCION_O_CONTEXTO
+    R29: RESTRICCION_O_CONTEXTO
+    R30: RESTRICCION_O_CONTEXTO
+    R31: RESTRICCION_O_CONTEXTO
+    R32: RESTRICCION_O_CONTEXTO
+    R33: RESTRICCION_O_CONTEXTO
+    R34: RESTRICCION_O_CONTEXTO
+    R35: RESTRICCION_O_CONTEXTO
+    R36: RESTRICCION_O_CONTEXTO
+    R37: RESTRICCION_O_CONTEXTO
+    R38: RESTRICCION_O_CONTEXTO
+    R39: RESTRICCION_O_CONTEXTO
+    R40: RESTRICCION_O_CONTEXTO
+    R41: RESTRICCION_O_CONTEXTO
+    R42: RESTRICCION_O_CONTEXTO
+    R43: RESTRICCION_O_CONTEXTO
+    R44: RESTRICCION_O_CONTEXTO
+    R45: RESTRICCION_O_CONTEXTO
+    R46: RESTRICCION_O_CONTEXTO
+    R47: RESTRICCION_O_CONTEXTO
+    R48: RESTRICCION_O_CONTEXTO
+    R49: RESTRICCION_O_CONTEXTO
+    R50: RESTRICCION_O_CONTEXTO
+    R51: RESTRICCION_O_CONTEXTO
+    R52: RESTRICCION_O_CONTEXTO

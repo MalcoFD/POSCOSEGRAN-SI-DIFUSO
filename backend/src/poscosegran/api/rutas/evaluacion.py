@@ -9,20 +9,37 @@ from typing import Annotated
 import sqlalchemy as sa
 from fastapi import APIRouter, Query, Response, status, HTTPException
 
-from ...db.modelos import Almacen, Borrador, Evaluacion, Unidad, VersionConocimiento
+from ...db.modelos import Almacen, Borrador, Evaluacion, Unidad, VersionConocimiento, Observacion
 from ...dominio import motor
 from ...esquemas import contrato as api
 from ...seguridad.dependencias import IdentidadDep, SesionDep
 from ...seguridad.permisos import RecursoInaccesible, exigir_acceso_unidad
 from ...servicios import auditoria, concurrencia, evaluaciones, observaciones, presentacion
 from ...servicios import conocimiento as servicio_conocimiento
-from ...sistema_experto import serializacion
-from ...sistema_experto.explicacion import Paso, RamaExplicada, explicar
+from ...inferencia import serializacion
+from ...inferencia.explicacion import explicar
 from ...servicios import vigencia as servicio_vigencia
 from .. import paginacion
 from ..dependencias import ClaveIdempotencia, IfMatch, IfNoneMatch, completar, etiquetar, reservar
 
 enrutador = APIRouter(prefix="/api/v1", tags=["evaluacion"])
+
+
+@enrutador.get('/unidades/{id_unidad}/captura-anterior', response_model=api.CapturaAnterior)
+def captura_anterior(id_unidad: uuid.UUID, sesion: SesionDep, identidad: IdentidadDep) -> api.CapturaAnterior:
+    exigir_acceso_unidad(sesion, identidad, id_unidad)
+    unidad = sesion.get(Unidad, id_unidad)
+    fila = sesion.get(Evaluacion, unidad.id_evaluacion_actual) if unidad and unidad.id_evaluacion_actual else None
+    if fila is None:
+        raise RecursoInaccesible(str(id_unidad))
+    efectiva = fila.entrada_efectiva
+    contenido = {k: v for k, v in efectiva.items() if k in api.EvaluacionEntrada.model_fields}
+    aplicadas = efectiva.get('_observaciones_aplicadas', [])
+    compartidas = set(sesion.scalars(sa.select(Observacion.id).where(
+        Observacion.id.in_([o['id'] for o in aplicadas]), Observacion.id_inspeccion_almacen.is_not(None))))
+    contenido['observaciones'] = [o['entrada'] for o in aplicadas if uuid.UUID(str(o['id'])) not in compartidas]
+    return api.CapturaAnterior(id_evaluacion=fila.id, fecha_evaluacion=fila.fecha_evaluacion,
+                              contenido=api.EvaluacionEntrada.model_validate(contenido))
 
 
 @enrutador.get("/unidades/{id_unidad}/borrador", response_model=api.Borrador)
@@ -155,11 +172,13 @@ def evaluar(
         for observacion in entrada.observaciones
     ]
 
+    # El reloj de la evaluación pertenece al servidor.
     ahora = datetime.now(UTC)
     instantanea, aplicadas = evaluaciones.construir_instantanea(
         sesion, unidad=unidad, almacen=almacen, entrada=entrada, filas_actuales=filas, ahora=ahora
     )
     resultado = motor.evaluar(instantanea, base)
+    # Una nueva declaración no puede borrar consumo documentado anteriormente.
     from dataclasses import replace
     previa = sesion.get(Evaluacion, unidad.id_evaluacion_actual) if unidad.id_evaluacion_actual else None
     if previa and previa.vida_minima_documentada is not None and (resultado.calculos.vida_minima_documentada or 0) < previa.vida_minima_documentada:
@@ -181,6 +200,8 @@ def evaluar(
         version=version,
     )
     evaluaciones.sincronizar_incidencias(sesion, id_unidad, resultado, fila_evaluacion.id)
+    # La captura enviada queda en la evaluación inmutable. El borrador de este
+    # usuario ya no debe reaparecer sobre una nueva inspección.
     sesion.execute(sa.delete(Borrador).where(
         Borrador.id_unidad == id_unidad, Borrador.id_usuario == identidad.id
     ))
@@ -253,6 +274,8 @@ def historial(
         if len(filas) > tope
         else None
     )
+    # La vigencia es la de la unidad hoy; las evaluaciones antiguas siguen siendo
+    # historia, no autorizaciones paralelas.
     actual = servicio_vigencia.calcular(sesion, id_unidad)
     return api.Pagina(
         items=[
@@ -307,18 +330,14 @@ def explicacion(id_evaluacion: uuid.UUID, sesion: SesionDep, identidad: Identida
         raise HTTPException(409, "la evaluación no se reproduce con su versión de la base: revise la integridad del registro")
     e = explicar(resultado, base)
 
-    def paso(p: Paso) -> api.PasoExplicacion:
+    def paso(p) -> api.PasoExplicacion:  # type: ignore[no-untyped-def]
         return api.PasoExplicacion(
             orden=p.orden, regla=p.regla, etapa=p.etapa, pasada=p.pasada, conclusion=p.conclusion,
             solicitudes=list(p.solicitudes), porque=list(p.porque), antecedente=p.antecedente,
-            grado=p.grado,
         )
 
-    def rama(r: RamaExplicada) -> api.RamaExplicada:
-        return api.RamaExplicada(
-            rama=r.rama, decision=r.decision, aplicada=r.aplicada, valor=r.valor, faltan=list(r.faltan),
-            grado=r.grado, corte=r.corte,
-        )
+    def rama(r) -> api.RamaExplicada:  # type: ignore[no-untyped-def]
+        return api.RamaExplicada(rama=r.rama, decision=r.decision, aplicada=r.aplicada, valor=r.valor, faltan=list(r.faltan))
 
     return api.Explicacion(
         id_evaluacion=fila.id,
@@ -336,6 +355,5 @@ def explicacion(id_evaluacion: uuid.UUID, sesion: SesionDep, identidad: Identida
         version_base=base.version_base,
         version_parametros=base.version_parametros,
         hash_base=base.hash,
-        origen_decision=e.origen_decision,
-        inferencia=presentacion.inferencia_del_motor(resultado.inferencia, resultado.traza),
+        difuso=resultado.difuso,
     )

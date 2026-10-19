@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import campos from '../campos.json'
 import { nombre, request, type Observacion, type Schema } from '../api/client'
@@ -9,6 +10,10 @@ export const fechaLocal = (value: string) => { const d = new Date(value); return
 export const ahoraLocal = () => fechaLocal(new Date().toISOString())
 export const vacio = (): CapturaValor => ({ valor: '', captura: 'DESCONOCIDO', fecha: ahoraLocal(), metodo: '', evidencia: '', causa: '' })
 const labels: Record<string, string> = {
+  filtracion_agua_almacen: 'Filtraciones de agua en el almacén', drenaje_obstruido: 'Drenaje obstruido', malla_ventana_danada: 'Malla de ventana dañada', abertura_ingreso_plagas: 'Aberturas para ingreso de plagas', humedad_por_agua_en_unidad: 'Unidad mojada por exposición a agua', agua_estancada_entorno: 'Agua estancada en el entorno', residuos_o_maleza_entorno: 'Residuos o maleza en el entorno', sacos_usados_o_desechos_en_almacen: 'Sacos usados o desechos en el almacén', residuos_de_proceso_sin_retirar: 'Residuos de proceso sin retirar',
+  paleta_danada_o_con_salientes: 'Paleta dañada o con salientes', estiba_inestable: 'Estiba inestable', altura_supera_limite_proveedor: 'Altura superior al límite del proveedor', pasillo_inspeccion_obstruido: 'Pasillo de inspección obstruido', distancia_entre_estantes: 'Separación entre estantes',
+  identificacion_unidad_legible: 'Identificación de unidad legible', registro_trazabilidad_completo: 'Registro de trazabilidad completo', movimiento_sin_registro: 'Movimiento sin registro', contacto_con_unidad_en_cuarentena: 'Contacto con unidad en cuarentena', separacion_cuarentena_verificada: 'Aislamiento de cuarentena verificado', derrame_grano_en_piso: 'Derrame de grano en el piso', grano_derramado_reincorporado: 'Grano derramado reincorporado sin verificación', rotacion_no_justificada: 'Rotación de salida sin justificación',
+  alimentos_olor_incompatible_en_contacto: 'Contacto con alimentos de olor incompatible', programa_control_plagas_documentado: 'Programa de control de plagas documentado', aplicacion_plaguicida_sin_registro_competente: 'Plaguicida aplicado sin registro competente', exposicion_quimica_del_grano: 'Exposición química del grano', fecha_vencimiento_producto: 'Fecha de vencimiento del producto', vencimiento_aplicable: 'Vencimiento comercial aplicable',
   humedad_grano: 'Humedad del grano', metodo_humedad: 'Método de medición de humedad', equipo_humedad_verificado: 'Equipo de humedad verificado',
   muestra_representativa: 'Muestra representativa', procedimiento_medicion_cumplido: 'Procedimiento de medición cumplido', temperatura_muestra: 'Temperatura de la muestra',
   temperatura_grano: 'Temperatura del grano', temperatura_grano_previa: 'Temperatura del grano anterior', punto_medicion: 'Punto de medición', punto_medicion_previo: 'Punto de medición anterior',
@@ -32,6 +37,16 @@ const labels: Record<string, string> = {
 }
 /** Nombre legible de un campo; los códigos técnicos no se muestran al usuario. */
 export const etiqueta = (campo: string) => labels[campo] || nombre(campo)
+export const unidadLegible = (unidad: string) => ({ PCT_BH: '% b.h.', PCT_HR: '% HR', PCT_MASA: '% masa', CELSIUS: '°C', METROS: 'm', DIAS: 'días', FRACCION: 'fracción' } as Record<string,string>)[unidad] ?? unidad
+
+function MetadatosObservacion({ label, value, change }: { label: string; value: CapturaValor; change: (patch: Partial<CapturaValor>) => void }) {
+  const [open, setOpen] = useState(!value.metodo)
+  return <details open={open} onToggle={e => setOpen(e.currentTarget.open)}><summary>Fecha, método y evidencia</summary><div className="stack compact">
+    <Field label={`Fecha de observación · ${label}`}><input type="datetime-local" value={value.fecha} onChange={e => change({ fecha: e.target.value })}/></Field>
+    <Field label={`Método · ${label}`}><input value={value.metodo} placeholder="Procedimiento o equipo utilizado" onChange={e => change({ metodo: e.target.value })}/></Field>
+    <Field label={`Evidencia · ${label}`}><input value={value.evidencia} onChange={e => change({ evidencia: e.target.value })}/></Field>
+  </div></details>
+}
 
 /** "¿Por qué se pide este dato?": reglas de la base que lo usan para decidir. */
 function PorQueSePide({ campo, uso }: { campo: string; uso?: Record<string, string[]> }) {
@@ -61,14 +76,16 @@ export function desdeObservaciones(observaciones: Observacion[]): CapturaDatos {
     fecha: o.fecha_observacion ? new Date(new Date(o.fecha_observacion).getTime() - new Date(o.fecha_observacion).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ahoraLocal(),
     metodo: o.metodo || '', evidencia: o.evidencia || '', causa: o.motivo_no_aplica || '' }]))
 }
-export default function Captura({ datos, onChange, paso, filtro }: { datos: CapturaDatos; onChange: (d: CapturaDatos) => void; paso?: number; filtro?: string[] }) {
+export default function Captura({ datos, onChange, paso, filtro, historicos = {} }: { datos: CapturaDatos; onChange: (d: CapturaDatos) => void; paso?: number; filtro?: string[]; historicos?: CapturaDatos }) {
   const catalogo = useQuery({ queryKey: ['conocimiento'], queryFn: () => request<Schema['Catalogo']>('/conocimiento'), staleTime: 300000 })
   const uso = catalogo.data?.uso_campos
   return <div className="capture-grid">{Object.entries(campos).filter(([key, def]) => key !== 'clima_calido' && (!paso || def.paso === paso) && (!filtro || filtro.includes(key))).map(([campo, def]) => {
-    const value = datos[campo] || vacio(), label = etiqueta(campo)
+    const value = datos[campo] || historicos[campo] || vacio(), label = etiqueta(campo)
+    const historico = !datos[campo] && !!historicos[campo]
     const change = (patch: Partial<CapturaValor>) => onChange({ ...datos, [campo]: { ...value, ...patch } })
-    return <div className="capture-field" key={campo}>
-      <Field label={`${label}${def.tipo === 'N' ? ' · ' + def.unidad : ''}`}>
+    return <div className={`capture-field${historico ? ' historical' : ''}`} key={campo}>
+      {historico && <small className="historical-note">Dato anterior · {value.fecha.replace('T',' ')}. Solo se registra una nueva observación si lo modificas; conserva o corrige su fecha real.</small>}
+      <Field label={`${label}${def.tipo === 'N' ? ' · ' + unidadLegible(def.unidad) : ''}`}>
         {def.tipo === 'B' ? <select value={value.captura === 'APORTADO' ? value.valor : value.captura} onChange={e => change(e.target.value === 'true' || e.target.value === 'false' ? { valor: e.target.value, captura: 'APORTADO' } : { valor: '', captura: e.target.value as CapturaValor['captura'] })}><option value="DESCONOCIDO">No se sabe</option><option value="true">Sí</option><option value="false">No</option>{def.admite_no_aplica && <option value="NO_APLICA">No aplica (justificar)</option>}</select>
           : campo === 'metodo_humedad' ? <select value={value.valor} onChange={e => change({ valor: e.target.value, captura: e.target.value ? 'APORTADO' : 'DESCONOCIDO' })}><option value="">No se sabe</option><option>INSTRUMENTAL</option><option>LABORATORIO</option><option>ESTIMACION_INDIRECTA</option></select>
           : <input type={def.tipo === 'F' ? 'datetime-local' : 'text'} inputMode={def.tipo === 'N' ? 'decimal' : undefined} value={value.valor} placeholder="Sin dato" onChange={e => change({ valor: e.target.value, captura: e.target.value ? 'APORTADO' : 'DESCONOCIDO' })} />}
@@ -76,11 +93,7 @@ export default function Captura({ datos, onChange, paso, filtro }: { datos: Capt
       {def.tipo !== 'B' && def.admite_no_aplica && <label className="check"><input type="checkbox" checked={value.captura === 'NO_APLICA'} onChange={e => change({ captura: e.target.checked ? 'NO_APLICA' : 'DESCONOCIDO', valor: '' })} />No aplica</label>}
       <PorQueSePide campo={campo} uso={uso} />
       {value.captura === 'NO_APLICA' && <Field label={`Motivo de no aplicación · ${label}`}><input value={value.causa} onChange={e => change({ causa: e.target.value })} /></Field>}
-      {value.captura === 'APORTADO' && <details open={!value.metodo}><summary>Fecha, método y evidencia</summary><div className="stack compact">
-        <Field label={`Fecha de observación · ${label}`}><input type="datetime-local" value={value.fecha} onChange={e => change({ fecha: e.target.value })} /></Field>
-        <Field label={`Método · ${label}`}><input value={value.metodo} placeholder="Procedimiento o equipo utilizado" onChange={e => change({ metodo: e.target.value })} /></Field>
-        <Field label={`Evidencia · ${label}`}><input value={value.evidencia} onChange={e => change({ evidencia: e.target.value })} /></Field>
-      </div></details>}
+      {value.captura === 'APORTADO' && <MetadatosObservacion label={label} value={value} change={change}/>}
     </div>
   })}</div>
 }

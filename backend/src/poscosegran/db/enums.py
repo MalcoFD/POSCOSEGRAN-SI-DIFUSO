@@ -9,7 +9,16 @@ from __future__ import annotations
 
 from typing import Final
 
+# INGENIERO_CONOCIMIENTO se añadió en la migración 0003: opera el módulo de adquisición.
 ROL: Final = ("PRODUCTOR", "TECNICO", "ADMINISTRADOR", "INGENIERO_CONOCIMIENTO")
+# Ciclo de vida de una versión de la base de conocimiento (migración 0003).
+# SUPERADA se añadió en la migración 0004: una versión que estuvo activa y dejó de
+# estarlo. Sin ella, la versión reemplazada quedaba en ACTIVADA con activa=false,
+# que se lee como si siguiera vigente.
+#
+# Cuidado al editar esta tupla: la migración 0003 construye su CHECK importándola,
+# así que una base creada desde cero ya admite los valores nuevos, mientras que una
+# base migrada antes necesita la 0004. La 0004 es idempotente por ese motivo.
 ESTADO_VERSION: Final = ("PROPUESTA", "ACTIVADA", "DESCARTADA", "SUPERADA")
 FASE: Final = ("INGRESO", "SEGUIMIENTO")
 MODALIDAD: Final = ("HERMETICO", "NO_HERMETICO")
@@ -62,8 +71,7 @@ APLICABILIDAD: Final = ("APLICA", "NO_APLICA")
 PROCEDENCIA: Final = ("ACTUAL", "HISTORICA", "ESTIMADA")
 
 FUNDAMENTO_MOTIVO: Final = ("PUBLICADO", "TRANSFERIDO", "POLITICA_PROTOTIPO", "MIXTO")
-OPERADOR: Final = ("GT", "GTE", "LT", "LTE", "EQ", "NEQ", "PRESENCIA", "VIGENCIA", "PERTENENCIA")
-ORIGEN_DECISION: Final = ("NITIDO", "VETO", "CORTE_ALFA", "INDICE", "PENDIENTES")
+OPERADOR: Final = ("GT", "GTE", "LT", "LTE", "EQ", "NEQ", "PRESENCIA", "VIGENCIA")
 RESPONSABLE_REQUERIDO: Final = ("PRODUCTOR", "TECNICO")
 TIPO_ESTIMACION: Final = ("ESTIMACION_HERMETICA", "SUSTITUCION_TABLA")
 

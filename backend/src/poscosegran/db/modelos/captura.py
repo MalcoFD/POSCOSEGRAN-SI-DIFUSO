@@ -102,6 +102,7 @@ class Observacion(Base):
 
     id: Mapped[uuid.UUID] = columna_id()
     id_unidad: Mapped[uuid.UUID] = fk_uuid("unidad.id", index=True)
+    id_inspeccion_almacen: Mapped[uuid.UUID | None] = fk_uuid("inspeccion_almacen.id", nullable=True)
     id_control: Mapped[uuid.UUID | None] = fk_uuid("control.id", nullable=True, index=True)
     id_evaluacion_origen: Mapped[uuid.UUID | None] = mapped_column(
         sa.Uuid,
@@ -164,6 +165,7 @@ class Observacion(Base):
             "  AND motivo_no_aplica IS NOT NULL)",
             name="no_aplica_exige_motivo",
         ),
+        # estado_dato nulo se reserva a NO_APLICA validado; nunca equivale a FALSO.
         sa.CheckConstraint(
             "estado_dato IS NOT NULL OR aplicabilidad = 'NO_APLICA'",
             name="estado_nulo_solo_no_aplica",

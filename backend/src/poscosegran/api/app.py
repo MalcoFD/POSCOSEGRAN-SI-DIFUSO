@@ -54,7 +54,8 @@ def crear_app() -> FastAPI:
         from .local import enrutador
         app.include_router(enrutador)
 
-    for modulo in (recursos, evaluacion, seguimiento, conocimiento, adquisicion):
+    from .rutas import inspecciones, administracion
+    for modulo in (recursos, evaluacion, seguimiento, conocimiento, adquisicion, inspecciones, administracion):
         app.include_router(modulo.enrutador)
 
     @app.get("/salud", tags=["operacion"])

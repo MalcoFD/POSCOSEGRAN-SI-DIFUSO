@@ -149,6 +149,23 @@ export interface paths {
         patch: operations["actualizar_unidad_api_v1_unidades__id_unidad__patch"];
         trace?: never;
     };
+    "/api/v1/unidades/{id_unidad}/captura-anterior": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Captura Anterior */
+        get: operations["captura_anterior_api_v1_unidades__id_unidad__captura_anterior_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/unidades/{id_unidad}/borrador": {
         parameters: {
             query?: never;
@@ -591,6 +608,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/almacenes/{id_almacen}/inspeccion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consultar */
+        get: operations["consultar_api_v1_almacenes__id_almacen__inspeccion_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/almacenes/{id_almacen}/inspecciones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Registrar */
+        post: operations["registrar_api_v1_almacenes__id_almacen__inspecciones_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/administracion/asignaciones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consultar */
+        get: operations["consultar_api_v1_administracion_asignaciones_get"];
+        put?: never;
+        /** Asignar */
+        post: operations["asignar_api_v1_administracion_asignaciones_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/salud": {
         parameters: {
             query?: never;
@@ -643,31 +712,19 @@ export interface components {
             /** Id Incidencia */
             id_incidencia: string | null;
         };
-        /** ActivacionDifusa */
-        ActivacionDifusa: {
-            /** Orden */
-            orden: number;
-            /** Produccion */
-            produccion: string;
-            /** Regla */
-            regla: string;
-            /** Etapa */
-            etapa: string;
-            /** Pasada */
-            pasada: number;
-            /** Grado Inf */
-            grado_inf: number;
-            /** Grado Sup */
-            grado_sup: number;
-            /** Hallazgo */
-            hallazgo: string | null;
-            /** Terminos Salida */
-            terminos_salida: string[];
-        };
         /** ActivacionEntrada */
         ActivacionEntrada: {
             /** Motivo */
             motivo: string;
+        };
+        /** Administracion */
+        Administracion: {
+            /** Tecnicos */
+            tecnicos: components["schemas"]["TecnicoAsignable"][];
+            /** Recursos */
+            recursos: components["schemas"]["RecursoAsignable"][];
+            /** Asignaciones */
+            asignaciones: components["schemas"]["AsignacionTecnica"][];
         };
         /** Admision */
         Admision: {
@@ -753,12 +810,25 @@ export interface components {
             /** Fundamento Clima */
             fundamento_clima: string | null;
         };
-        /** AlturaSalida */
-        AlturaSalida: {
-            /** Termino */
-            termino: string;
-            /** Altura */
-            altura: number;
+        /** AsignacionTecnica */
+        AsignacionTecnica: {
+            /**
+             * Id Tecnico
+             * Format: uuid
+             */
+            id_tecnico: string;
+            /**
+             * Id Recurso
+             * Format: uuid
+             */
+            id_recurso: string;
+            /**
+             * Tipo
+             * @enum {string}
+             */
+            tipo: "ALMACEN" | "LOTE";
+            /** Vigente */
+            vigente: boolean;
         };
         /** Borrador */
         Borrador: {
@@ -816,6 +886,20 @@ export interface components {
              */
             tipo: "MODIFICADA" | "NUEVA" | "RETIRADA";
         };
+        /** CapturaAnterior */
+        CapturaAnterior: {
+            /**
+             * Id Evaluacion
+             * Format: uuid
+             */
+            id_evaluacion: string;
+            /**
+             * Fecha Evaluacion
+             * Format: date-time
+             */
+            fecha_evaluacion: string;
+            contenido: components["schemas"]["EvaluacionEntrada-Output"];
+        };
         /** CasoAfectado */
         CasoAfectado: {
             /**
@@ -837,10 +921,6 @@ export interface components {
             reglas_nuevas: string[];
             /** Reglas Retiradas */
             reglas_retiradas: string[];
-            /** Indice Antes */
-            indice_antes?: number | null;
-            /** Indice Despues */
-            indice_despues?: number | null;
         };
         /** Catalogo */
         Catalogo: {
@@ -856,6 +936,8 @@ export interface components {
             version_parametros?: string | null;
             /** Hash Base */
             hash_base?: string | null;
+            /** Modelo Difuso */
+            modelo_difuso?: Record<string, never> | null;
             /** Parametros */
             parametros?: components["schemas"]["Parametro"][];
             /**
@@ -962,7 +1044,7 @@ export interface components {
              * Paso
              * @enum {integer}
              */
-            paso: 1 | 2 | 3 | 4 | 5 | 6;
+            paso: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
         };
         /** DescarteEntrada */
         DescarteEntrada: {
@@ -979,13 +1061,10 @@ export interface components {
              * @description Reglas de producción tal como las ejecuta el motor.
              */
             reglas: Record<string, never>[];
-            /**
-             * Fichas
-             * @description Fichas documentales completas de la versión.
-             */
-            fichas: components["schemas"]["FichaRegla"][];
             /** Cambios Respecto Origen */
             cambios_respecto_origen: components["schemas"]["CambioParametro"][];
+            /** Difuso */
+            difuso?: Record<string, never> | null;
         };
         /** Dictamen */
         Dictamen: {
@@ -1106,7 +1185,7 @@ export interface components {
              * Rama R30
              * @enum {string}
              */
-            rama_r30: "R30.1" | "R30.2" | "R30.3" | "R30.4" | "R30.5" | "R30.6" | "R30.7" | "R30.8" | "R30.9";
+            rama_r30: "MAMDANI_FINAL" | "R30.1" | "R30.2" | "R30.3" | "R30.4" | "R30.5" | "R30.6" | "R30.7" | "R30.8" | "R30.9";
             /** Motivos */
             motivos: components["schemas"]["Motivo"][];
             /** Acciones Requeridas */
@@ -1130,8 +1209,11 @@ export interface components {
             version_parametros: string;
             /** Version Motor */
             version_motor: string;
-            /** @description Sistema de inferencia difusa (Mamdani); null en evaluaciones nítidas. */
-            inferencia?: components["schemas"]["InferenciaDifusa"] | null;
+            /**
+             * Difuso
+             * @description Traza Mamdani inmutable; los índices no son probabilidades.
+             */
+            difuso?: Record<string, never> | null;
         };
         /** EvaluacionEntrada */
         "EvaluacionEntrada-Input": {
@@ -1225,19 +1307,9 @@ export interface components {
             /** Fecha Observacion */
             fecha_observacion: string | null;
             /** Operador */
-            operador: ("GT" | "GTE" | "LT" | "LTE" | "EQ" | "NEQ" | "PRESENCIA" | "VIGENCIA" | "PERTENENCIA") | null;
+            operador: ("GT" | "GTE" | "LT" | "LTE" | "EQ" | "NEQ" | "PRESENCIA" | "VIGENCIA") | null;
             /** Umbral */
             umbral: number | boolean | string | null;
-            /**
-             * Termino
-             * @description Término lingüístico evaluado (operador PERTENENCIA).
-             */
-            termino?: string | null;
-            /**
-             * Grado
-             * @description Grado de pertenencia μ del valor observado al término.
-             */
-            grado?: number | null;
         };
         /** Explicacion */
         Explicacion: {
@@ -1280,33 +1352,8 @@ export interface components {
             version_parametros: string;
             /** Hash Base */
             hash_base: string;
-            /**
-             * Origen Decision
-             * @default NITIDO
-             * @enum {string}
-             */
-            origen_decision: "NITIDO" | "VETO" | "CORTE_ALFA" | "INDICE" | "PENDIENTES";
-            inferencia?: components["schemas"]["InferenciaDifusa"] | null;
-        };
-        /** FichaRegla */
-        FichaRegla: {
-            /** Id */
-            id: string;
-            /** Antecedente */
-            antecedente: string;
-            /** Consecuente */
-            consecuente: string;
-            /** Accion */
-            accion: string;
-            /** Fundamento Markdown */
-            fundamento_markdown: string;
-            /**
-             * Fundamento
-             * @enum {string}
-             */
-            fundamento: "PUBLICADO" | "TRANSFERIDO" | "POLITICA_PROTOTIPO" | "MIXTO";
-            /** Fuentes */
-            fuentes?: string[];
+            /** Difuso */
+            difuso?: Record<string, never> | null;
         };
         /** Fuente */
         Fuente: {
@@ -1361,11 +1408,6 @@ export interface components {
             casos: components["schemas"]["CasoAfectado"][];
             /** Nuevas Autorizaciones */
             nuevas_autorizaciones: number;
-            /**
-             * Variacion Maxima Indice
-             * @description Distancia de Tchebychev entre los índices de severidad de ambas versiones: la mayor variación en un caso.
-             */
-            variacion_maxima_indice?: number | null;
         };
         /** Incidencia */
         Incidencia: {
@@ -1401,24 +1443,6 @@ export interface components {
             /** Cerrada En */
             cerrada_en: string | null;
         };
-        /** InferenciaDifusa */
-        InferenciaDifusa: {
-            /** Pertenencias */
-            pertenencias: components["schemas"]["PertenenciaDifusa"][];
-            /** Activaciones */
-            activaciones: components["schemas"]["ActivacionDifusa"][];
-            salida: components["schemas"]["SalidaDifusa"];
-            /**
-             * Origen Decision
-             * @enum {string}
-             */
-            origen_decision: "NITIDO" | "VETO" | "CORTE_ALFA" | "INDICE" | "PENDIENTES";
-            /**
-             * Borrosidad
-             * @description Borrosidad normalizada de la fuzzificación: 0 = nítida, 1 = máxima.
-             */
-            borrosidad: number | null;
-        };
         /** Inicio */
         Inicio: {
             /** Unidades Total */
@@ -1429,6 +1453,64 @@ export interface components {
             correcciones_pendientes: number;
             /** Controles Proximos */
             controles_proximos: components["schemas"]["ControlProximo"][];
+        };
+        /** InspeccionAlmacen */
+        InspeccionAlmacen: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Id Almacen
+             * Format: uuid
+             */
+            id_almacen: string;
+            /**
+             * Id Responsable
+             * Format: uuid
+             */
+            id_responsable: string;
+            /** Revision Almacen */
+            revision_almacen: number;
+            /**
+             * Fecha
+             * Format: date-time
+             */
+            fecha: string;
+            /**
+             * Vigente Hasta
+             * Format: date-time
+             */
+            vigente_hasta: string;
+            /** Evidencia */
+            evidencia: string;
+            /** Observaciones */
+            observaciones: components["schemas"]["ObservacionEntrada"][];
+            /**
+             * Creada En
+             * Format: date-time
+             */
+            creada_en: string;
+        };
+        /** InspeccionAlmacenEntrada */
+        InspeccionAlmacenEntrada: {
+            /** Revision Almacen */
+            revision_almacen: number;
+            /**
+             * Fecha
+             * Format: date-time
+             */
+            fecha: string;
+            /**
+             * Vigente Hasta
+             * Format: date-time
+             */
+            vigente_hasta: string;
+            /** Evidencia */
+            evidencia: string;
+            /** Observaciones */
+            observaciones: components["schemas"]["ObservacionEntrada"][];
         };
         /** IntervaloEntrada */
         IntervaloEntrada: {
@@ -1515,12 +1597,6 @@ export interface components {
              * @enum {string}
              */
             fundamento: "PUBLICADO" | "TRANSFERIDO" | "POLITICA_PROTOTIPO" | "MIXTO";
-            /**
-             * Grado Activacion
-             * @description Grado α con que se activó la regla (Modus Ponens Generalizado).
-             * @default 1
-             */
-            grado_activacion: number;
         };
         /**
          * ObservacionEntrada
@@ -1693,11 +1769,6 @@ export interface components {
             porque: string[];
             /** Antecedente */
             antecedente: string | null;
-            /**
-             * Grado
-             * @default 1
-             */
-            grado: number;
         };
         /** Perfil */
         Perfil: {
@@ -1710,19 +1781,6 @@ export interface components {
             nombre: string;
             /** Roles */
             roles: ("PRODUCTOR" | "TECNICO" | "ADMINISTRADOR" | "INGENIERO_CONOCIMIENTO")[];
-        };
-        /** PertenenciaDifusa */
-        PertenenciaDifusa: {
-            /** Variable */
-            variable: string;
-            /** Termino */
-            termino: string;
-            /** Valor */
-            valor: number | null;
-            /** Unidad */
-            unidad: string;
-            /** Grado */
-            grado: number;
         };
         /** Plan */
         Plan: {
@@ -1799,18 +1857,16 @@ export interface components {
                 [key: string]: Record<string, never> | null;
             };
             /**
-             * Fichas
-             * @description Código documental → ficha completa de una regla añadida o editada.
-             */
-            fichas?: {
-                [key: string]: components["schemas"]["FichaRegla"];
-            };
-            /**
              * Guardar
              * @description false: solo simular; true: registrar como PROPUESTA si es válida.
              * @default false
              */
             guardar: boolean;
+            /**
+             * Difuso
+             * @description Modelo Mamdani completo propuesto; exige nueva versión de base.
+             */
+            difuso?: Record<string, never> | null;
         };
         /** PropuestaResultado */
         PropuestaResultado: {
@@ -1846,18 +1902,21 @@ export interface components {
             valor: "VERDADERO" | "FALSO" | "DESCONOCIDO" | "NO_APLICA";
             /** Faltan */
             faltan: string[];
+        };
+        /** RecursoAsignable */
+        RecursoAsignable: {
             /**
-             * Grado
-             * @description Grado cierto de la condición de la rama.
-             * @default 1
+             * Id
+             * Format: uuid
              */
-            grado: number;
+            id: string;
+            /** Nombre */
+            nombre: string;
             /**
-             * Corte
-             * @description Corte-α que debe alcanzar la rama.
-             * @default 1
+             * Tipo
+             * @enum {string}
              */
-            corte: number;
+            tipo: "ALMACEN" | "LOTE";
         };
         /** Regla */
         Regla: {
@@ -1963,29 +2022,15 @@ export interface components {
             /** Evidencia */
             evidencia: string;
         };
-        /** SalidaDifusa */
-        SalidaDifusa: {
-            /** Variable */
-            variable: string;
+        /** TecnicoAsignable */
+        TecnicoAsignable: {
             /**
-             * Metodo
-             * @constant
+             * Id
+             * Format: uuid
              */
-            metodo: "CENTROIDE";
-            /**
-             * Alturas
-             * @description Altura de recorte de cada consecuente (implicación de Mamdani).
-             */
-            alturas: components["schemas"]["AlturaSalida"][];
-            /**
-             * Indice
-             * @description Centroide del conjunto agregado; null si el conjunto agregado es vacío.
-             */
-            indice: number | null;
-            /** Banda */
-            banda: string | null;
-            /** Decision Indice */
-            decision_indice: string | null;
+            id: string;
+            /** Nombre */
+            nombre: string;
         };
         /** Unidad */
         Unidad: {
@@ -2610,6 +2655,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Unidad"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    captura_anterior_api_v1_unidades__id_unidad__captura_anterior_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id_unidad: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CapturaAnterior"];
                 };
             };
             /** @description Validation Error */
@@ -3647,6 +3725,144 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VersionConocimientoResumen"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    consultar_api_v1_almacenes__id_almacen__inspeccion_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id_almacen: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InspeccionAlmacen"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    registrar_api_v1_almacenes__id_almacen__inspecciones_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                id_almacen: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InspeccionAlmacenEntrada"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InspeccionAlmacen"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    consultar_api_v1_administracion_asignaciones_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Administracion"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    asignar_api_v1_administracion_asignaciones_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AsignacionTecnica"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AsignacionTecnica"];
                 };
             };
             /** @description Validation Error */

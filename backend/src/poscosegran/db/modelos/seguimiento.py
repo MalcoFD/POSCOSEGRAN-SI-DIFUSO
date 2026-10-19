@@ -97,6 +97,7 @@ class Incidencia(Base):
             "(estado = 'CERRADA') = (cerrada_en IS NOT NULL)", name="cierre_coherente"
         ),
         sa.CheckConstraint("revision >= 1", name="revision_positiva"),
+        # Un solo episodio abierto por unidad y tipo: evita duplicar cuarentenas.
         sa.Index(
             "ux_incidencia_abierta_por_tipo",
             "id_unidad",

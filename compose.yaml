@@ -1,3 +1,5 @@
+name: poscosegran
+
 x-entorno-backend-local: &entorno_backend_local
   POSCOSEGRAN_ENTORNO: local
   POSCOSEGRAN_BD_URL_APP: postgresql+psycopg://poscosegran_app:local_app_2026@bd:5432/poscosegran

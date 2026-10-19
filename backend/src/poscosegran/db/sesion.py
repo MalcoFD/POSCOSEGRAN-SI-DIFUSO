@@ -7,7 +7,6 @@ carga aquí: vive en Alembic y no debe estar disponible en tiempo de ejecución.
 from __future__ import annotations
 
 import uuid
-from typing import Any
 from collections.abc import Iterator
 from contextlib import contextmanager
 
@@ -36,7 +35,7 @@ def obtener_motor() -> Engine:
         )
 
         @event.listens_for(_motor, "connect")
-        def _fijar_ruta_busqueda(dbapi_conn: Any, _registro: Any) -> None:
+        def _fijar_ruta_busqueda(dbapi_conn, _registro) -> None:  # type: ignore[no-untyped-def]
             with dbapi_conn.cursor() as cur:
                 cur.execute(f"SET search_path TO {ESQUEMA}")
 

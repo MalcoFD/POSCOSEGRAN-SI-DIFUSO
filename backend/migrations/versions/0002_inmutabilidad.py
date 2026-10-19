@@ -22,6 +22,7 @@ depends_on = None
 
 ESQUEMA = "poscosegran"
 
+# Historial estricto: ni UPDATE ni DELETE.
 TABLAS_INMUTABLES = (
     "evaluacion",
     "evaluacion_motivo",
@@ -40,6 +41,7 @@ TABLAS_INMUTABLES = (
     "auditoria",
 )
 
+# Se pueden actualizar con auditoría, pero nunca borrar.
 TABLAS_SIN_BORRADO = (
     "almacen",
     "lote",

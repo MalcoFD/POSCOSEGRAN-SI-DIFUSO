@@ -1,14 +1,14 @@
 """Comprueba NO_APLICA con hechos de contexto; el motivo por sí solo no basta."""
 from dataclasses import replace
 
-from ..dominio.valores import Dato, EstadoDato, F, Tri, V
+from ..dominio.valores import Dato, EstadoDato, F, V
 
 
 def comprobar(datos: dict[str, Dato], modalidad: str | None, fase: str | None) -> dict[str, Dato]:
     salida = dict(datos)
     hermetico = modalidad == "HERMETICO"
     no_hermetico = modalidad == "NO_HERMETICO"
-    def booleano(campo: str) -> Tri:
+    def booleano(campo: str):  # type: ignore[no-untyped-def]
         return datos.get(campo, Dato(campo)).booleano
     for campo, dato in datos.items():
         if not dato.no_aplica:
@@ -33,7 +33,15 @@ def comprobar(datos: dict[str, Dato], modalidad: str | None, fase: str | None) -
         elif campo in {"ingreso_inspeccionado", "limpieza_previa_nuevo_lote"}:
             permitido = fase == "SEGUIMIENTO"
         elif campo == "limpieza_tras_operaciones":
+            # La matriz permite ausencia documentada de operaciones.
             permitido = bool((dato.motivo_no_aplica or "").strip())
+        elif campo == 'fecha_vencimiento_producto':
+            aplicable = datos.get('vencimiento_aplicable', Dato('vencimiento_aplicable'))
+            permitido = aplicable.booleano is F or aplicable.no_aplica
+        elif campo in {'distancia_entre_estantes', 'vencimiento_aplicable'}:
+            # El catálogo actual no dispone de otro indicador de estantes o
+            # vencimiento comercial. La exclusión requiere constancia explícita.
+            permitido = bool((dato.motivo_no_aplica or '').strip())
         if not permitido:
             salida[campo] = replace(dato, no_aplica=False, estado=EstadoDato.INVALIDO)
     return salida

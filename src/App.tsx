@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-quer
 import { createRootRoute, createRoute, createRouter, RouterProvider, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import Sidebar from './components/Sidebar'
 import Dashboard from './views/Dashboard'
+import Configuracion from './views/Configuracion'
 import Evaluacion from './views/Evaluacion'
 import Resultado from './views/Resultado'
 import Seguimiento from './views/Seguimiento'
@@ -19,15 +20,22 @@ const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false,
 export const paths: Record<View, string> = { dashboard: '/', evaluacion: '/evaluacion', resultado: '/resultado', seguimiento: '/seguimiento', almacenes: '/almacenes', revision: '/revision', conocimiento: '/conocimiento', adquisicion: '/adquisicion', configuracion: '/configuracion' }
 export function useAppNavigate() {
   const navigate = useNavigate()
-  return (view: View, id?: string) => { void navigate({ to: paths[view], search: id ? { id } : {} }); window.scrollTo(0, 0) }
+  return (view: View, id?: string, paso?: number) => { void navigate({ to: paths[view], search: id ? { id, ...(paso ? {paso} : {}) } : {} }); window.scrollTo(0, 0) }
 }
 export function useId() { return useRouterState({ select: s => (s.location.search as { id?: string }).id }) }
+export function usePaso() { return useRouterState({ select: s => (s.location.search as { paso?: number }).paso }) }
 function Shell() {
   const [logged, setLogged] = useState<boolean | null>(null)
   const [collapsed, setCollapsed] = useState(window.innerWidth < 768)
   const navigate = useAppNavigate()
   const path = useRouterState({ select: s => s.location.pathname })
   const perfil = useQuery({ queryKey: ['perfil'], queryFn: () => request<Schema['Perfil']>('/me'), enabled: logged === true })
+  useEffect(() => {
+    const anchoMovil = window.matchMedia('(max-width: 767px)')
+    const ajustar = () => { if (anchoMovil.matches) setCollapsed(true) }
+    anchoMovil.addEventListener('change', ajustar)
+    return () => anchoMovil.removeEventListener('change', ajustar)
+  }, [])
   useEffect(() => {
     void accessToken().then(token => setLogged(!!token))
     const listener = supabase?.auth.onAuthStateChange((event, session) => {
@@ -44,7 +52,7 @@ function Shell() {
   if (!logged) return <Login onLogin={() => { queryClient.clear(); setLogged(true) }} />
   const active = (Object.keys(paths) as View[]).find(v => paths[v] === path) || 'dashboard'
   return <div className="app-shell">
-    <Sidebar activeView={active} onNavigate={navigate} collapsed={collapsed} onToggle={() => setCollapsed(v => !v)} roles={perfil.data?.roles || []} />
+    <Sidebar activeView={active} onNavigate={view => { navigate(view); if (window.innerWidth < 768) setCollapsed(true) }} collapsed={collapsed} onToggle={() => setCollapsed(v => !v)} roles={perfil.data?.roles || []} />
     <div className="app-content" style={{ marginLeft: collapsed ? 64 : 240 }}>
       <header className="topbar"><span className="muted desktop-only">Sistema de gestión poscosecha</span>
         <div><strong>{perfil.data?.nombre || 'Sesión'}</strong><small>{perfil.data?.roles.join(' · ')}{localAuth ? ' · Desarrollo local' : ''}</small></div>
@@ -55,7 +63,7 @@ function Shell() {
   </div>
 }
 const root = createRootRoute({ component: Shell, notFoundComponent: () => <p>Página no encontrada.</p> })
-const validateSearch = (s: Record<string, unknown>): { id?: string } => typeof s.id === 'string' ? { id: s.id } : {}
+const validateSearch = (s: Record<string, unknown>): { id?: string; paso?: number } => ({ ...(typeof s.id === 'string' ? {id:s.id} : {}), ...(Number.isInteger(s.paso) && Number(s.paso) >= 1 && Number(s.paso) <= 10 ? {paso:Number(s.paso)} : {}) })
 const children = [
   createRoute({ getParentRoute: () => root, path: '/', component: Dashboard }),
   createRoute({ getParentRoute: () => root, path: '/evaluacion', validateSearch, component: Evaluacion }),
@@ -65,7 +73,7 @@ const children = [
   createRoute({ getParentRoute: () => root, path: '/revision', component: Revision }),
   createRoute({ getParentRoute: () => root, path: '/conocimiento', component: Conocimiento }),
   createRoute({ getParentRoute: () => root, path: '/adquisicion', component: Adquisicion }),
-  createRoute({ getParentRoute: () => root, path: '/configuracion', component: () => <section className="panel"><h1>Configuración</h1><p>Los roles y las asignaciones se administran mediante el procedimiento documentado. Los umbrales y las reglas pertenecen a la base de conocimiento versionada y se mantienen desde el módulo de adquisición.</p></section> }),
+  createRoute({ getParentRoute: () => root, path: '/configuracion', component: Configuracion }),
 ]
 const router = createRouter({ routeTree: root.addChildren(children) })
 export default function App() { return <QueryClientProvider client={queryClient}><RouterProvider router={router} /></QueryClientProvider> }

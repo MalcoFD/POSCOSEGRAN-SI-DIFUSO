@@ -13,9 +13,6 @@ from sqlalchemy.orm import Session
 
 from ..db.modelos import (
     AccionRequerida,
-    Activacion as ActivacionBD,
-    Pertenencia as PertenenciaBD,
-    SalidaDifusa as SalidaDifusaBD,
     Control,
     Evento,
     RevisionIncidencia,
@@ -35,7 +32,7 @@ from ..db.modelos import (
     VersionConocimiento,
 )
 from ..dominio import motor
-from ..sistema_experto import serializacion
+from ..inferencia import serializacion
 from ..dominio.hechos import (
     Controles,
     Dictamen,
@@ -84,9 +81,24 @@ def construir_instantanea(
     enviados = {fila.campo for fila in filas_actuales}
     reutilizadas = obs.historicas(sesion, unidad.id, excluir=enviados)
 
-    aplicadas = [*filas_actuales, *reutilizadas]
+    from .inspecciones import vigente, CAMPOS_ALMACEN
+    inspeccion = vigente(sesion, almacen, ahora, unidad.id)
+    compartidas = []
+    if inspeccion is not None:
+        # Una declaración de esta unidad, incluso desconocida, prevalece sobre
+        # cualquier inspección compartida: no se sustituye por un dato favorable.
+        ya_presentes = enviados | {o.campo for o in reutilizadas}
+        for contenido in inspeccion.observaciones:
+            if contenido['campo'] in CAMPOS_ALMACEN and contenido['campo'] not in ya_presentes:
+                fila = obs.a_fila(api.ObservacionEntrada.model_validate(contenido),
+                                  id_unidad=unidad.id, id_responsable=inspeccion.id_responsable)
+                fila.id_inspeccion_almacen = inspeccion.id
+                fila.procedencia = 'HISTORICA'
+                compartidas.append(fila)
+    aplicadas = [*filas_actuales, *reutilizadas, *compartidas]
     datos = {fila.campo: replace(obs.a_dato(fila), procedencia=Procedencia.HISTORICA)
              for fila in reutilizadas}
+    datos.update({fila.campo: replace(obs.a_dato(fila), procedencia=Procedencia.HISTORICA) for fila in compartidas})
     datos.update({fila.campo: obs.a_dato(fila) for fila in filas_actuales})
 
     datos = comprobar(datos, unidad.tipo_almacenamiento, entrada.fase)
@@ -136,6 +148,7 @@ def construir_instantanea(
         else None
     )
 
+    # Los controles completos aportan fechas verificadas; los parciales no renuevan vigencia.
     from ..dominio.valores import Dato, EstadoDato
     fechas_control = {"GRANO": "fecha_inspeccion_grano", "EXTERIOR": "fecha_inspeccion_exterior",
                       "ALMACEN": "fecha_control_almacen"}
@@ -148,6 +161,7 @@ def construir_instantanea(
     evento = sesion.scalar(sa.select(Evento).where(Evento.id_unidad == unidad.id)
                           .order_by(Evento.creado_en.desc()).limit(1))
     if evento and evento.tipo in {"APERTURA", "RESELLADO", "SECADO", "ENFRIAMIENTO", "EXPOSICION_AGUA", "CARGA_DESCARGA"}:
+        # Una comprobación anterior al evento no demuestra las condiciones posteriores.
         for campo in ("cierre_seguro", "sello_integro", "temperatura_grano_previa",
                       "fecha_inspeccion_grano", "fecha_inspeccion_exterior", "ingreso_inspeccionado"):
             dato = datos.get(campo)
@@ -252,7 +266,7 @@ def construir_instantanea(
     return instantanea, aplicadas
 
 
-TIPO_INCIDENCIA_POR_HALLAZGO = {
+TIPO_INCIDENCIA_POR_HALLAZGO: dict[str, tuple[str, tuple[str, ...]]] = {
     "CUARENTENA_SOLICITADA": ("CUARENTENA", ("R19",)),
     "INFESTACION_SOSPECHADA": ("REVISION_PLAGAS", ("R15",)),
     "PUNTO_CALIENTE_SOSPECHADO": ("REVISION_TERMICA", ("R09",)),
@@ -263,7 +277,7 @@ def sincronizar_incidencias(
     sesion: Session, id_unidad: uuid.UUID, resultado: motor.Resultado, id_evaluacion: uuid.UUID | None
 ) -> list[Incidencia]:
     """Abre los episodios que el motor solicita. Cerrarlos exige resolución registrada."""
-    hallazgos = {motivo.id.split(":", 1)[1] for motivo in resultado.motivos}
+    hallazgos = {motivo.id.split(":", 1)[-1] for motivo in resultado.motivos}
     abiertas = {
         fila.tipo: fila
         for fila in sesion.scalars(
@@ -273,8 +287,23 @@ def sincronizar_incidencias(
         )
     }
     creadas: list[Incidencia] = []
-    for hallazgo, (tipo, reglas) in TIPO_INCIDENCIA_POR_HALLAZGO.items():
-        if hallazgo not in hallazgos or tipo in abiertas:
+    # Las ampliaciones y Mamdani generan solicitudes con sus causas. No depender
+    # exclusivamente del nombre del hallazgo R19: R36/R43/R46/R50/R51 también
+    # requieren episodios persistentes, aunque no pase por esa producción.
+    cuarentena = tuple(resultado.solicitudes.get('CUARENTENA_SOLICITADA', ()))
+    tipos = dict(TIPO_INCIDENCIA_POR_HALLAZGO)
+    if cuarentena:
+        hallazgos.add('CUARENTENA_SOLICITADA')
+        tipos['CUARENTENA_SOLICITADA'] = ('CUARENTENA', cuarentena)
+    for hallazgo, (tipo, reglas) in tipos.items():
+        if hallazgo not in hallazgos:
+            continue
+        if tipo in abiertas:
+            episodio = abiertas[tipo]
+            causas = list(dict.fromkeys([*episodio.causas, *reglas]))
+            if causas != episodio.causas:
+                episodio.causas = causas
+                episodio.revision += 1
             continue
         incidencia = Incidencia(
             id_unidad=id_unidad,
@@ -285,6 +314,7 @@ def sincronizar_incidencias(
         )
         sesion.add(incidencia)
         creadas.append(incidencia)
+        abiertas[tipo] = incidencia
     return creadas
 
 
@@ -301,14 +331,18 @@ def persistir(
     version: VersionConocimiento,
 ) -> EvaluacionBD:
     calculos = resultado.calculos
-    inferencia = resultado.inferencia
     efectiva = entrada.model_dump(mode="json")
     efectiva["_instantanea"] = jsonable_encoder(instantanea, custom_encoder={Decimal: str})
+    # Base de hechos iniciales en forma reproducible y huella de la base usada:
+    # permiten explicar y volver a evaluar esta decisión con la misma versión.
+    efectiva['_inspecciones_aplicadas'] = sorted({str(f.id_inspeccion_almacen) for f in aplicadas if f.id_inspeccion_almacen})
     efectiva["_hechos_iniciales"] = serializacion.a_json(instantanea)
     efectiva["_hash_base"] = resultado.hash_base
+    if resultado.difuso is not None:
+        efectiva['_difuso'] = resultado.difuso
     efectiva["_observaciones_aplicadas"] = [
         obs.a_validada(fila).model_copy(update={"procedencia":
-            "ACTUAL" if sa.inspect(fila).transient else "HISTORICA"}).model_dump(mode="json")
+            "ACTUAL" if sa.inspect(fila).transient and not fila.id_inspeccion_almacen else "HISTORICA"}).model_dump(mode="json")
         for fila in aplicadas
     ]
     for aplicada in efectiva["_observaciones_aplicadas"]:
@@ -342,11 +376,6 @@ def persistir(
         celda_dias_referencia=calculos.celda.dias_referencia if calculos.celda else None,
         fecha_proximo_control=resultado.fecha_proximo_control,
         fecha_vencimiento_autorizacion=resultado.fecha_vencimiento_autorizacion,
-        indice_severidad=_decimal(inferencia.salida.indice) if inferencia else None,
-        banda_severidad=inferencia.salida.banda if inferencia else None,
-        metodo_defuzzificacion=inferencia.salida.metodo if inferencia else None,
-        origen_decision=resultado.origen_decision if inferencia else None,
-        borrosidad=_decimal(inferencia.borrosidad) if inferencia else None,
         version_base=resultado.version_base,
         version_parametros=resultado.version_parametros,
         version_motor=resultado.version_motor,
@@ -364,7 +393,6 @@ def persistir(
             regla=motivo.regla,
             mensaje=motivo.mensaje,
             fundamento=motivo.fundamento,
-            grado_activacion=_grado(motivo.grado),
         )
         sesion.add(fila)
         sesion.flush()
@@ -376,8 +404,6 @@ def persistir(
                 unidad_dato=prueba.unidad,
                 fecha_observacion=prueba.fecha_observacion,
                 operador=prueba.operador,
-                termino=prueba.termino,
-                grado=_decimal(prueba.grado),
             )
             _asignar_valor(evidencia, "valor", prueba.valor_observado)
             _asignar_valor(evidencia, "umbral", prueba.umbral)
@@ -418,44 +444,6 @@ def persistir(
                 id_tabla=estimacion.id_tabla,
             )
         )
-    if inferencia is not None:
-        for pertenencia in inferencia.pertenencias:
-            sesion.add(
-                PertenenciaBD(
-                    id_evaluacion=evaluacion.id,
-                    variable=pertenencia.variable,
-                    termino=pertenencia.termino,
-                    valor_nitido=_decimal(pertenencia.valor),
-                    unidad=pertenencia.unidad,
-                    grado=_grado(pertenencia.grado),
-                )
-            )
-        for activacion in resultado.traza:
-            sesion.add(
-                ActivacionBD(
-                    id_evaluacion=evaluacion.id,
-                    orden=activacion.orden,
-                    produccion=activacion.produccion,
-                    regla=activacion.regla,
-                    etapa=activacion.etapa,
-                    pasada=activacion.pasada,
-                    grado_inf=_grado(activacion.grado),
-                    grado_sup=_grado(activacion.grado_sup),
-                    hallazgo=activacion.hallazgo,
-                    terminos_salida=list(activacion.terminos_salida),
-                    soportes=list(activacion.soportes),
-                )
-            )
-        for termino, altura in inferencia.salida.alturas:
-            sesion.add(
-                SalidaDifusaBD(
-                    id_evaluacion=evaluacion.id,
-                    variable=inferencia.salida.variable,
-                    termino=termino,
-                    altura=_grado(altura),
-                )
-            )
-
     for orden, fila_obs in enumerate(aplicadas, start=1):
         if sa.inspect(fila_obs).transient:
             fila_obs.id_evaluacion_origen = evaluacion.id
@@ -470,17 +458,6 @@ def persistir(
     unidad.id_evaluacion_actual = evaluacion.id
     unidad.actualizado_en = datetime.now(UTC)
     return evaluacion
-
-
-def _decimal(valor: float | None) -> Decimal | None:
-    """Grados e índices del motor (float) a NUMERIC, con 4 decimales estables."""
-    if valor is None:
-        return None
-    return _grado(valor)
-
-
-def _grado(valor: float) -> Decimal:
-    return Decimal(str(round(valor, 4)))
 
 
 def _asignar_valor(destino: MotivoEvidencia, prefijo: str, valor: object) -> None:

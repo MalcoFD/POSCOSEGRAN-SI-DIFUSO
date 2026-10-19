@@ -23,6 +23,7 @@ USUARIOS = {
 }
 ALIAS_USUARIOS = {"testeo": "productor"}
 
+# Rol de cada usuario local; el nombre de usuario no siempre coincide con el rol.
 ROLES_LOCALES = {
     "productor": "PRODUCTOR",
     "tecnico": "TECNICO",
@@ -42,15 +43,15 @@ def sesion_local(entrada: AccesoLocal, request: Request) -> dict[str, str | int]
     cfg = obtener_configuracion()
     if not limite.permitir(request.client.host if request.client else "local"):
         raise HTTPException(429, "Demasiados intentos; espere un minuto")
-    usuario = ALIAS_USUARIOS.get(entrada.usuario, entrada.usuario)
-    identificador = USUARIOS.get(usuario)
+    nombre_usuario = ALIAS_USUARIOS.get(entrada.usuario, entrada.usuario)
+    identificador = USUARIOS.get(nombre_usuario)
     if identificador is None or not hmac.compare_digest(
         entrada.password.encode(), (cfg.auth_local_password or "").encode()
     ):
         raise HTTPException(401, "Credenciales incorrectas")
     with unidad_de_trabajo() as db:
-        cuenta = db.get(Usuario, identificador)
-        if cuenta is None or not cuenta.activo:
+        usuario = db.get(Usuario, identificador)
+        if usuario is None or not usuario.activo:
             raise HTTPException(403, "Ejecute la preparación del entorno local")
     ahora = datetime.now(UTC)
     vencimiento = ahora + timedelta(hours=8)

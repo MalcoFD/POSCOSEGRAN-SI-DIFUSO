@@ -20,7 +20,7 @@ class Tri(enum.Enum):
     DESCONOCIDO = "DESCONOCIDO"
     NO_APLICA = "NO_APLICA"
 
-    def __bool__(self) -> bool:  
+    def __bool__(self) -> bool:  # pragma: no cover
         raise TypeError("use Tri.VERDADERO explícitamente; el valor de verdad no es binario")
 
     @property
@@ -65,110 +65,6 @@ def no(valor: Tri) -> Tri:
     if valor is F:
         return V
     return valor
-
-
-# ---------------------------------------------------------------------------
-# Grado de verdad difuso con incertidumbre (extensión conservadora de Kleene)
-# ---------------------------------------------------------------------------
-#
-# La teoría de conjuntos difusos del sistema es (F(U), mín, máx, 1 - x): la
-# t-norma y la t-conorma de Zadeh con la negación estándar, que es fuerte e
-# involutiva y dual de ambas por De Morgan.
-#
-# Un grado es un intervalo [inf, sup] contenido en [0, 1]. Un dato difuso
-# conocido tiene inf = sup = μ; un dato desconocido es [0, 1], y la ausencia de
-# información se propaga en lugar de convertirse en una condición favorable.
-# Sobre {[0,0], [1,1], [0,1]} las operaciones coinciden exactamente con la
-# lógica de tres estados y(), o() y no(): la lógica actual es un caso particular.
-
-PRECISION_GRADO = 6
-
-
-def _redondear(valor: float) -> float:
-    return round(min(1.0, max(0.0, float(valor))), PRECISION_GRADO)
-
-
-@dataclass(frozen=True, slots=True)
-class Grado:
-    """Grado de verdad difuso: [inf, sup] ⊆ [0, 1], o NO_APLICA."""
-
-    inf: float
-    sup: float
-    no_aplica: bool = False
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, "inf", _redondear(self.inf))
-        object.__setattr__(self, "sup", _redondear(self.sup))
-        if self.inf > self.sup:
-            raise ValueError(f"grado mal formado: [{self.inf}, {self.sup}]")
-
-    @classmethod
-    def exacto(cls, valor: float) -> "Grado":
-        return cls(valor, valor)
-
-    @classmethod
-    def desde_tri(cls, valor: Tri) -> "Grado":
-        if valor is Tri.VERDADERO:
-            return G_V
-        if valor is Tri.FALSO:
-            return G_F
-        if valor is Tri.NO_APLICA:
-            return G_NA
-        return G_D
-
-    @property
-    def cierto(self) -> float:
-        """Grado que se puede afirmar con la información disponible (α⁻)."""
-        return 0.0 if self.no_aplica else self.inf
-
-    @property
-    def desconocido(self) -> bool:
-        """Falta información: el grado real puede estar en cualquier punto de [inf, sup]."""
-        return not self.no_aplica and self.inf < self.sup
-
-    @property
-    def tri(self) -> Tri:
-        """Proyección a tres estados para los consumidores nítidos.
-
-        Un grado parcial conocido se proyecta como DESCONOCIDO: ni se afirma ni se
-        niega, que es la lectura conservadora para quien solo entiende V/F/D.
-        """
-        if self.no_aplica:
-            return Tri.NO_APLICA
-        if self.inf >= 1.0:
-            return Tri.VERDADERO
-        if self.sup <= 0.0:
-            return Tri.FALSO
-        return Tri.DESCONOCIDO
-
-
-G_V = Grado(1.0, 1.0)
-G_F = Grado(0.0, 0.0)
-G_D = Grado(0.0, 1.0)
-G_NA = Grado(0.0, 0.0, no_aplica=True)
-
-
-def conjuncion(*grados: Grado) -> Grado:
-    """t-norma mínimo de Zadeh sobre ambas cotas; NO_APLICA no participa."""
-    efectivos = [g for g in grados if not g.no_aplica]
-    if not efectivos:
-        return G_NA
-    return Grado(min(g.inf for g in efectivos), min(g.sup for g in efectivos))
-
-
-def disyuncion(*grados: Grado) -> Grado:
-    """t-conorma máximo de Zadeh sobre ambas cotas; NO_APLICA no participa."""
-    efectivos = [g for g in grados if not g.no_aplica]
-    if not efectivos:
-        return G_NA
-    return Grado(max(g.inf for g in efectivos), max(g.sup for g in efectivos))
-
-
-def negacion(grado: Grado) -> Grado:
-    """Negación estándar n(x) = 1 - x extendida a intervalos: [1 - sup, 1 - inf]."""
-    if grado.no_aplica:
-        return G_NA
-    return Grado(1.0 - grado.sup, 1.0 - grado.inf)
 
 
 class EstadoDato(enum.Enum):
@@ -247,21 +143,16 @@ class Evidencia:
     fecha_observacion: datetime | None = None
     operador: str | None = None
     umbral: Decimal | bool | str | datetime | None = None
-    termino: str | None = None
-    grado: float | None = None
 
 
-def evidencia(
-    dato: Dato, operador: str | None = None,
-    umbral: Decimal | bool | str | datetime | None = None,
-) -> Evidencia:
+def evidencia(dato: Dato, operador: str | None = None, umbral: object = None) -> Evidencia:
     return Evidencia(
         campo=dato.campo,
         valor_observado=dato.valor,
         unidad=dato.unidad,
         fecha_observacion=dato.fecha_observacion,
         operador=operador,
-        umbral=umbral,  
+        umbral=umbral,  # type: ignore[arg-type]
     )
 
 
@@ -311,7 +202,7 @@ def comparar(izquierda: Dato, operador: str, derecha: Dato) -> Tri:
             return V if a < b else F
         case "LTE":
             return V if a <= b else F
-        case _:  
+        case _:  # pragma: no cover
             raise ValueError(f"operador no admitido: {operador}")
 
 

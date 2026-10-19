@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from ..db.modelos import Evaluacion, Evento, Incidencia, Unidad
+from ..db.modelos import Evaluacion, Evento, Incidencia, Unidad, InspeccionAlmacen
 from ..esquemas.contrato import Vigencia
 
 AUTORIZADAS = {"AUTORIZAR_ALMACENAMIENTO", "AUTORIZAR_CON_MONITOREO"}
@@ -47,6 +47,7 @@ def calcular(sesion: Session, id_unidad: uuid.UUID) -> Vigencia:
             causas=[f"La última evaluación resolvió {evaluacion.decision_final}."],
         )
 
+    # Un episodio abierto o un evento posterior invalidan una autorización previa.
     abiertas = sesion.scalars(
         sa.select(Incidencia.tipo).where(
             Incidencia.id_unidad == id_unidad,
@@ -68,6 +69,10 @@ def calcular(sesion: Session, id_unidad: uuid.UUID) -> Vigencia:
     if evaluacion.revision_unidad_usada != unidad.revision:
         causas.append("La unidad cambió después de la evaluación.")
 
+    ids_inspeccion = evaluacion.entrada_efectiva.get('_inspecciones_aplicadas', [])
+    for inspeccion in sesion.scalars(sa.select(InspeccionAlmacen).where(InspeccionAlmacen.id.in_(ids_inspeccion))):
+        if ahora >= inspeccion.vigente_hasta:
+            causas.append('La inspección compartida aplicada ha vencido; requiere reevaluación.')
     if causas:
         return Vigencia(
             id_unidad=id_unidad,

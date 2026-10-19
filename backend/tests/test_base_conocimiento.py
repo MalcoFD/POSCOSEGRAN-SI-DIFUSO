@@ -22,9 +22,9 @@ from casos.base import base as caso_base
 from casos.base import con, desconocido, num
 from poscosegran.dominio.hechos import Fase
 from poscosegran.dominio.motor import evaluar
-from poscosegran.sistema_experto import adquisicion, base_conocimiento, serializacion
-from poscosegran.sistema_experto.base_conocimiento import BaseInvalida, desde_contenido
-from poscosegran.sistema_experto.explicacion import explicar, por_que_se_pide
+from poscosegran.inferencia import adquisicion, base_conocimiento, serializacion
+from poscosegran.inferencia.base_conocimiento import BaseInvalida, desde_contenido
+from poscosegran.inferencia.explicacion import explicar, por_que_se_pide
 from poscosegran.sistema_experto.motor import Motor
 
 PAQUETE = Path(base_conocimiento.__file__).parent
@@ -45,11 +45,11 @@ def _errores(contenido) -> list[str]:
     return error.value.errores
 
 
+# --- Base de conocimiento -----------------------------------------------------------
 
 
 def test_la_base_del_repositorio_es_valida(activa) -> None:
-    assert len(activa.parametros) == 40  # 29 del dominio + 8 anchos de transición + 3 cortes-α
-    assert activa.es_difusa
+    assert len(activa.parametros) == 29
     assert {r.regla for r in activa.reglas if r.regla.startswith("R") and "." not in r.regla} == (
         {f"R{n:02d}" for n in range(1, 30)} | {f"R{n:02d}" for n in range(31, 53)}
     )
@@ -109,6 +109,7 @@ def test_cambiar_un_parametro_cambia_la_decision(activa) -> None:
 def test_retirar_una_regla_la_desactiva(activa) -> None:
     contenido = _contenido(activa)
     contenido["operativa"]["reglas"] = [r for r in contenido["operativa"]["reglas"] if r["id"] != "R18"]
+    # El cargador exige las 29 reglas del catálogo: retirarla invalida la base.
     assert any("R18" in e for e in _errores(contenido))
 
 
@@ -152,8 +153,6 @@ def test_casos_de_referencia_se_reproducen(activa) -> None:
             "motivos": sorted(m.id for m in r.motivos),
             "pendientes": sorted({p.campo for p in r.datos_pendientes}),
         }
-        if "indice" in esperado:
-            obtenido["indice"] = r.inferencia.salida.indice if r.inferencia is not None else None
         if obtenido != esperado:
             fallos.append(ident)
     assert not fallos, f"{len(fallos)} casos cambian: {fallos[:5]}"
@@ -165,6 +164,7 @@ def test_serializacion_ida_y_vuelta() -> None:
     assert serializacion.a_json(serializacion.desde_json(json.loads(json.dumps(ida)))) == ida
 
 
+# --- Motor --------------------------------------------------------------------------------
 
 
 def test_traza_registra_encadenamiento_en_dos_pasadas() -> None:
@@ -186,6 +186,7 @@ def test_resolucion_evalua_todas_las_ramas_pero_decide_una() -> None:
     assert next(x for x in r.ramas if x.rama == "R30.9").valor == "VERDADERO"
 
 
+# --- Explicación ------------------------------------------------------------------------
 
 
 def test_explicacion_como(activa) -> None:
@@ -220,6 +221,7 @@ def test_por_que_se_pide(activa) -> None:
     assert por_que_se_pide("observaciones_libres", activa).reglas == ()
 
 
+# --- Adquisición ------------------------------------------------------------------------
 
 
 @pytest.fixture(scope="module")
@@ -239,6 +241,7 @@ def test_propuesta_valida_mide_impacto(activa, pocos_casos) -> None:
     assert p.cambios_parametros[0].anterior == Decimal("14")
     assert p.impacto is not None and p.impacto.evaluados == len(pocos_casos)
     assert p.base is not None and p.base.parametro("humedad_admision_max") == Decimal("13.5")
+    # La versión activa no cambia: la propuesta es una copia.
     assert activa.parametro("humedad_admision_max") == Decimal("14")
 
 
@@ -265,10 +268,8 @@ def test_propuesta_incoherente_se_rechaza(activa, pocos_casos) -> None:
 def test_propuesta_que_relaja_advierte(activa) -> None:
     inst = con(caso_base(), hr_almacen=num("hr_almacen", "62", "PCT_HR"))
     assert evaluar(inst).decision_final == "CORREGIR_Y_REEVALUAR"
-    # Con la rampa de 5 puntos del lado seguro, relajar el umbral a 65 % aún deja
-    # 62 % en transición (HÚMEDA 0,4); a 70 % el caso queda plenamente seco.
-    p = adquisicion.proponer(activa, motivo="Relajar HR del almacén para zonas altoandinas", version_parametros="2.1",
-                             parametros={"hr_almacen_max": 70}, casos=[("manual:hr62", "manual", inst)])
+    p = adquisicion.proponer(activa, motivo="Relajar HR del almacén para zonas altoandinas", version_parametros="1.1",
+                             parametros={"hr_almacen_max": 65}, casos=[("manual:hr62", "manual", inst)])
     assert p.valida
     assert p.impacto.nuevas_autorizaciones == 1
     assert any("pasarían a autorizarse" in a for a in p.advertencias)
@@ -296,6 +297,7 @@ def test_inconsistencia_detectada_fuera_del_motor_exige_correccion() -> None:
     assert "vida_previa_menor_al_historial_persistido" in motivo.mensaje
 
 
+# --- Grafo de dependencias y orden seguro -------------------------------------------
 
 
 def _sin_etapa(contenido, produccion: str, etapa: str) -> None:
@@ -332,20 +334,25 @@ def test_el_agotamiento_se_decide_antes_que_el_aviso(activa) -> None:
 @pytest.mark.parametrize(
     "mutacion, fragmento",
     [
+        # R28 vuelve a la etapa de su productor: el resultado dependería del YAML.
         (lambda o: _sin_etapa(o, "R28", "tiempo"), "la misma etapa"),
+        # El productor pasa a una etapa posterior a la que lo niega.
         (lambda o: _sin_etapa(o, "R29", "control"), "la etapa posterior"),
+        # Un hecho que nadie afirma nunca podría ser verdadero.
         (
             lambda o: next(r for r in o["reglas"] if r["id"] == "R12").update(
                 {"si": {"hecho": "HECHO_QUE_NO_EXISTE"}}
             ),
             "ninguna producción afirma",
         ),
+        # Dos productores hacen ambigua la etapa en que el hecho queda decidido.
         (
             lambda o: next(r for r in o["reglas"] if r["id"] == "R06")["entonces"].update(
                 {"hallazgo": "HUMEDAD_APTA_BASE"}
             ),
             "único productor",
         ),
+        # Una regla de validación no puede esperar un hecho de la consolidación.
         (
             lambda o: next(r for r in o["reglas"] if r["id"] == "R12").update(
                 {"etapa": "validacion", "si": {"hecho": "PLAZO_INCOMPATIBLE"}}
@@ -379,6 +386,7 @@ def test_las_ramas_r30_pueden_negar_hechos_de_cualquier_etapa(activa) -> None:
     assert any(d.hechos_negados for d in ramas)
 
 
+# --- Propiedades del ciclo de inferencia --------------------------------------------
 
 
 def test_refraccion_y_terminacion(activa) -> None:
@@ -423,6 +431,7 @@ def test_cadena_de_tres_producciones_hasta_la_decision(activa) -> None:
     assert resultado.rama_r30 == "R30.1"
     assert resultado.decision_final == "CUARENTENA"
 
+    # La misma cadena, leída del grafo y no de una ejecución concreta.
     grafo = {d.id: d for d in activa.dependencias}
     assert grafo["R20"].hallazgo in grafo["R19"].hechos
     assert "CUARENTENA" in grafo["R19"].produce_solicitudes

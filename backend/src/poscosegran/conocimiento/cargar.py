@@ -20,16 +20,16 @@ import sqlalchemy as sa
 from ..db.modelos import VersionConocimiento
 from ..db.sesion import unidad_de_trabajo
 from ..servicios import conocimiento as servicio
-from ..sistema_experto import base_conocimiento
-from ..sistema_experto.base_conocimiento import BaseInvalida
+from ..inferencia import base_conocimiento
+from ..inferencia.base_conocimiento import BaseInvalida
 from .esquema import Catalogo
 
 
 def cargar(carpeta: Path, *, activar: bool, notas: str | None) -> str:
-    if carpeta.is_file():  
+    if carpeta.is_file():  # compatibilidad: antes se pasaba knowledge/catalogo.yaml
         carpeta = carpeta.parent
     contenido = base_conocimiento.leer_archivos(carpeta)
-    Catalogo.model_validate(contenido["documental"])  
+    Catalogo.model_validate(contenido["documental"])  # contrato del catálogo documental
     base = base_conocimiento.desde_contenido(contenido)
 
     with unidad_de_trabajo() as sesion:
@@ -63,7 +63,9 @@ def main(argumentos: list[str] | None = None) -> int:
     opciones = analizador.parse_args(argumentos)
 
     carpeta = opciones.ruta or base_conocimiento.ruta_por_defecto()
-    if carpeta.is_file():  
+    if opciones.ruta is None and (carpeta / 'difuso' / 'base_conocimiento.yaml').exists():
+        carpeta = carpeta / 'difuso'
+    if carpeta.is_file():  # compatibilidad: antes se pasaba knowledge/catalogo.yaml
         carpeta = carpeta.parent
     if not (carpeta / "base_conocimiento.yaml").exists():
         print(f"no existe {carpeta / 'base_conocimiento.yaml'}", file=sys.stderr)

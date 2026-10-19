@@ -5,17 +5,9 @@
 # no contiene umbrales, reglas ni prioridades: los lee de aquí. Cambiar un valor
 # o una regla en este archivo cambia lo que el sistema decide.
 #
-# Fuente del dominio: POSCOSEGRAN_52_reglas_base_conocimiento_integrada.md (3.1,
-# con la sección 13, "Modelo difuso"). La documentación textual de cada regla vive
-# en catalogo.yaml; el cargador comprueba que ambos archivos describen exactamente
-# las mismas reglas.
-#
-# Sistema de inferencia difusa tipo Mamdani (sección `inferencia_difusa`):
-#   teoría (F(U), mín, máx, 1 - x); implicación de Mamdani; composición sup-min;
-#   agregación por máximo; defuzzificación por centroide.
-#   Operador de condición:  difuso: variable  es: término | [términos]
-#   Las variables se anclan a los parámetros publicados: con anchos de transición
-#   nulos los términos son conjuntos nítidos y la base reproduce la lógica anterior.
+# Fuente del dominio: POSCOSEGRAN_30_reglas_base_conocimiento_actualizado.md (2.0).
+# La documentación textual de cada regla vive en catalogo.yaml; el cargador
+# comprueba que ambos archivos describen exactamente las mismas reglas.
 #
 # Lenguaje de condiciones (cada nodo es un diccionario con un solo operador):
 #   todos / alguno / negar / implica{si,entonces} / guarda{campo,entonces}
@@ -27,13 +19,12 @@
 #   vigente_meses / vencido_dias / horas_entre / diferencia
 #   hay_invalidos / inconsistencia / pendientes / constante / siempre
 # Valores: número | texto | {param: nombre} | {dato: campo} | {elegir{si,entonces,sino}}
-# Grados de verdad [inf, sup] ⊆ [0, 1]; VERDADERO = [1,1], FALSO = [0,0],
-# DESCONOCIDO = [0,1] y NO_APLICA se excluye (sección 2.2 y sección 13).
-# Una producción se activa con α = grado cierto (inf) de su condición, si α > 0.
+# Lógica de tres estados (sección 2.2): VERDADERO, FALSO, DESCONOCIDO, NO_APLICA.
+# Una regla solo se dispara cuando su condición es VERDADERO.
 # ============================================================================
 
-version_base: "3.1"
-version_parametros: "2.0"
+version_base: "2.0"
+version_parametros: "1.0"
 
 # ----------------------------------------------------------------------------
 # Parámetros del prototipo — sección 3.1
@@ -69,20 +60,6 @@ parametros:
   materia_organica_max:        {valor: 1.5,  unidad: PCT_MASA, fundamento: TRANSFERIDO,        fuentes: [S09],     descripcion: "Materia orgánica extraña"}
   materia_inorganica_max:      {valor: 0.5,  unidad: PCT_MASA, fundamento: TRANSFERIDO,        fuentes: [S09],     descripcion: "Materia inorgánica extraña"}
 
-  # --- Modelo difuso (sección 13). Anchos de transición: conocimiento nuevo, sin
-  # fuente publicada, pendiente de validación con expertos y datos de campo.
-  transicion_humedad:          {valor: 0.5,  unidad: PCT_BH,   fundamento: POLITICA_PROTOTIPO, fuentes: [],        descripcion: "Ancho de la rampa de humedad del grano, del lado seguro de cada umbral"}
-  transicion_temperatura:      {valor: 2,    unidad: CELSIUS,  fundamento: POLITICA_PROTOTIPO, fuentes: [],        descripcion: "Ancho de la rampa de temperatura (almacén y grano)"}
-  transicion_hr:               {valor: 5,    unidad: PCT_HR,   fundamento: POLITICA_PROTOTIPO, fuentes: [],        descripcion: "Ancho de la rampa de humedad relativa"}
-  transicion_aw:               {valor: 0.05, unidad: FRACCION, fundamento: POLITICA_PROTOTIPO, fuentes: [],        descripcion: "Ancho de la rampa de actividad de agua"}
-  transicion_vida:             {valor: 0.05, unidad: FRACCION, fundamento: POLITICA_PROTOTIPO, fuentes: [],        descripcion: "Ancho de la rampa de vida consumida"}
-  transicion_aumento_termico:  {valor: 0.5,  unidad: CELSIUS,  fundamento: POLITICA_PROTOTIPO, fuentes: [],        descripcion: "Ancho de la relación difusa 'aumento térmico significativo'"}
-  transicion_equilibrio:       {valor: 0.5,  unidad: PCT_BH,   fundamento: POLITICA_PROTOTIPO, fuentes: [],        descripcion: "Ancho de la relación 'grano más húmedo que el equilibrio'"}
-  transicion_aire_grano:       {valor: 1,    unidad: CELSIUS,  fundamento: POLITICA_PROTOTIPO, fuentes: [],        descripcion: "Ancho de la relación 'aire exterior más cálido que el grano'"}
-  corte_grave:                 {valor: 1,    unidad: FRACCION, fundamento: POLITICA_PROTOTIPO, fuentes: [],        descripcion: "1-corte (núcleo) para cuarentena, bloqueo y retirada"}
-  corte_correccion:            {valor: 0.5,  unidad: FRACCION, fundamento: POLITICA_PROTOTIPO, fuentes: [],        descripcion: "0,5-corte para corregir y reevaluar"}
-  corte_autorizacion:          {valor: 0.5,  unidad: FRACCION, fundamento: POLITICA_PROTOTIPO, fuentes: [],        descripcion: "0,5-corte de elegibilidad para autorizar"}
-
 # Restricciones de integridad entre parámetros. Una propuesta del módulo de
 # adquisición que las incumpla se rechaza aunque su sintaxis sea correcta.
 restricciones:
@@ -95,13 +72,6 @@ restricciones:
   - {menor: enfermos_max, que: defectuosos_max, igual: true, motivo: "los granos enfermos son un subconjunto de los defectuosos"}
   - {entre: aw_alerta, minimo: 0, maximo: 1, motivo: "la actividad de agua es una fracción"}
   - {entre: vida_alerta, minimo: 0, maximo: 1, motivo: "la vida consumida es una fracción"}
-  - {menor: transicion_humedad, que_diferencia: [humedad_admision_max, humedad_base_max], igual: true, motivo: "la transición de humedad no puede invertir la banda condicional"}
-  - {menor: transicion_vida, que_diferencia: [vida_limite, vida_alerta], igual: true, motivo: "la transición de vida no puede solapar el aviso y el agotamiento"}
-  - {menor: transicion_temperatura, que_diferencia: [temperatura_alerta, insectos_temperatura_min], igual: true, motivo: "las rampas térmicas de 15 °C y 25 °C no pueden solaparse"}
-  - {entre: corte_grave, minimo: 0.01, maximo: 1, motivo: "un corte-α está en (0, 1]"}
-  - {entre: corte_correccion, minimo: 0.01, maximo: 1, motivo: "un corte-α está en (0, 1]"}
-  - {entre: corte_autorizacion, minimo: 0.01, maximo: 1, motivo: "un corte-α está en (0, 1]"}
-  - {menor: corte_correccion, que: corte_grave, igual: true, motivo: "una acción grave no puede exigir menos certeza que una corrección"}
 
 # Localizador de cada fuente dentro del documento citado.
 localizadores:
@@ -358,7 +328,7 @@ definiciones:
       entonces:
         alguno:
           - {es_falso: {dato: aw_medida}}
-          - {difuso: actividad_agua, es: SEGURA}
+          - {dato: actividad_agua, op: LT, valor: {param: aw_alerta}}
 
   ambiente_base_apto:
     descripcion: "Ambiente del almacén dentro de la condición base (R06)"
@@ -371,8 +341,9 @@ definiciones:
 
   temperatura_bajo_alerta:
     descripcion: "Temperatura del grano por debajo de la alerta"
-    difuso: temperatura_grano_aplicable
-    es: [FRIA, TEMPLADA]
+    dato: temperatura_grano_aplicable
+    op: LT
+    valor: {param: temperatura_alerta}
 
   lecturas_termicas_comparables:
     descripcion: "Dos lecturas del mismo punto y método dentro de la ventana permitida"
@@ -548,23 +519,24 @@ reglas:
     si:
       todos:
         - {definicion: medicion_confirmada}
-        - {difuso: humedad_grano, es: NO_APTA}
+        - {dato: humedad_grano, op: GT, valor: {param: humedad_admision_max}}
     entonces:
       hallazgo: HUMEDAD_NO_APTA
       solicitudes: [SUSPENSION]
-      mensaje: "Humedad confirmada {dato:humedad_grano} % b.h. es NO APTA con grado {grado} (núcleo desde el máximo de admisión de {param:humedad_admision_max} %): no procede la {ingreso?admisión|permanencia normal}."
+      mensaje: "Humedad confirmada {dato:humedad_grano} % b.h. supera el máximo de admisión de {param:humedad_admision_max} %: no procede la {ingreso?admisión|permanencia normal}."
       accion: {codigo: CORREGIR, descripcion: "Secar el lote, medir de nuevo y volver a evaluar.", responsable: PRODUCTOR}
-    evidencias: [{dato: humedad_grano, es: NO_APTA}]
+    evidencias: [{dato: humedad_grano, op: GT, valor: {param: humedad_admision_max}}]
 
   - id: R02
     si:
       todos:
         - {definicion: medicion_confirmada}
-        - {difuso: humedad_grano, es: CONDICIONAL}
+        - {dato: humedad_grano, op: GT, valor: {param: humedad_base_max}}
+        - {dato: humedad_grano, op: LTE, valor: {param: humedad_admision_max}}
     entonces:
       hallazgo: HUMEDAD_CONDICIONAL
-      mensaje: "Humedad confirmada {dato:humedad_grano} % b.h. pertenece a la banda condicional ({param:humedad_base_max}–{param:humedad_admision_max} %) con grado {grado}."
-    evidencias: [{dato: humedad_grano, es: CONDICIONAL}]
+      mensaje: "Humedad confirmada {dato:humedad_grano} % b.h. está en la banda condicional (> {param:humedad_base_max} % y <= {param:humedad_admision_max} %)."
+    evidencias: [{dato: humedad_grano, op: GT, valor: {param: humedad_base_max}}]
 
   - id: R02-secado
     regla: R02
@@ -580,30 +552,29 @@ reglas:
       solicitudes: [CORRECCION]
       mensaje: "La banda condicional no es admisible con almacenamiento hermético, clima cálido o plazo mayor de {param:plazo_corto_max_dias} días: secar hasta <= {param:humedad_base_max} %."
       accion: {codigo: CORREGIR, descripcion: "Secar hasta {param:humedad_base_max} % b.h. y reevaluar.", responsable: PRODUCTOR}
-    evidencias: [{dato: humedad_grano, es: CONDICIONAL}]
+    evidencias: [{dato: humedad_grano, op: GT, valor: {param: humedad_base_max}}]
 
   - id: R03
     si:
       todos:
         - {definicion: medicion_confirmada}
-        - {difuso: humedad_grano, es: APTA_BASE}
-    salida: BAJA
+        - {dato: humedad_grano, op: LTE, valor: {param: humedad_base_max}}
     entonces:
       hallazgo: HUMEDAD_APTA_BASE
-      mensaje: "Humedad confirmada {dato:humedad_grano} % b.h. dentro de la condición base con grado {grado}. Este hecho no autoriza por sí solo."
-    evidencias: [{dato: humedad_grano, es: APTA_BASE}]
+      mensaje: "Humedad confirmada {dato:humedad_grano} % b.h. dentro de la condición base. Este hecho no autoriza por sí solo."
+    evidencias: [{dato: humedad_grano, op: LTE, valor: {param: humedad_base_max}}]
 
   - id: R04
     si:
       todos:
         - {dato: aw_medida}
-        - {difuso: actividad_agua, es: ALERTA}
+        - {dato: actividad_agua, op: GTE, valor: {param: aw_alerta}}
     entonces:
       hallazgo: RIESGO_FUNGICO_HIDRICO
       solicitudes: [CORRECCION]
-      mensaje: "Actividad de agua medida {dato:actividad_agua} en alerta fúngica con grado {grado} (núcleo desde {param:aw_alerta})."
+      mensaje: "Actividad de agua medida {dato:actividad_agua} alcanza o supera {param:aw_alerta}."
       accion: {codigo: REVISION_TECNICA, descripcion: "Secado o evaluación técnica y nueva medición.", responsable: TECNICO}
-    evidencias: [{dato: actividad_agua, es: ALERTA}]
+    evidencias: [{dato: actividad_agua, op: GTE, valor: {param: aw_alerta}}]
 
   - id: R05
     si:
@@ -621,48 +592,47 @@ reglas:
   - id: R06
     si:
       todos:
-        - {difuso: temperatura_almacen, es: [FRIA, TEMPLADA]}
+        - {dato: temperatura_almacen, op: LT, valor: {param: temperatura_alerta}}
         - alguno:
-            - todos: [{contexto: tipo_almacenamiento, igual: NO_HERMETICO}, {difuso: hr_almacen, es: SECA}]
+            - todos: [{contexto: tipo_almacenamiento, igual: NO_HERMETICO}, {dato: hr_almacen, op: LT, valor: {param: hr_almacen_max}}]
             - todos: [{contexto: tipo_almacenamiento, igual: HERMETICO}, {definicion: integridad_hermetica}]
-    salida: BAJA
     entonces:
       hallazgo: AMBIENTE_BASE_APTO
-      mensaje: "Ambiente del almacén dentro de la condición base con grado {grado}."
+      mensaje: "Ambiente del almacén dentro de la condición base."
     evidencias:
-      - {dato: temperatura_almacen, es: [FRIA, TEMPLADA]}
-      - {dato: hr_almacen, es: SECA}
+      - {dato: temperatura_almacen, op: LT, valor: {param: temperatura_alerta}}
+      - {dato: hr_almacen, op: LT, valor: {param: hr_almacen_max}}
 
   - id: R07
     aplica_si: {contexto: tipo_almacenamiento, igual: NO_HERMETICO}
-    si: {difuso: hr_almacen, es: HUMEDA}
+    si: {dato: hr_almacen, op: GTE, valor: {param: hr_almacen_max}}
     entonces:
       hallazgo: RIESGO_REHUMEDECIMIENTO
       solicitudes: [CORRECCION]
-      mensaje: "Humedad relativa del almacén {dato:hr_almacen} % es HÚMEDA con grado {grado} (núcleo desde {param:hr_almacen_max} %) en almacenamiento no hermético."
+      mensaje: "Humedad relativa del almacén {dato:hr_almacen} % alcanza o supera {param:hr_almacen_max} % en almacenamiento no hermético."
       accion: {codigo: CORREGIR, descripcion: "Corregir la exposición a humedad del almacén.", responsable: PRODUCTOR}
-    evidencias: [{dato: hr_almacen, es: HUMEDA}]
+    evidencias: [{dato: hr_almacen, op: GTE, valor: {param: hr_almacen_max}}]
 
   - id: R08
     si:
       alguno:
-        - {difuso: temperatura_almacen, es: [CALIDA, MUY_CALIDA]}
-        - {difuso: temperatura_grano_aplicable, es: [CALIDA, MUY_CALIDA]}
+        - {dato: temperatura_almacen, op: GTE, valor: {param: temperatura_alerta}}
+        - {dato: temperatura_grano_aplicable, op: GTE, valor: {param: temperatura_alerta}}
     entonces:
       hallazgo: RIESGO_TERMICO
       solicitudes: [CORRECCION]
-      mensaje: "Temperatura cálida en el almacén o en el grano con grado {grado} (núcleo desde {param:temperatura_alerta} °C)."
+      mensaje: "Temperatura de {param:temperatura_alerta} °C o más en el almacén o en el grano."
       accion: {codigo: CORREGIR, descripcion: "Evaluar enfriamiento, revisar el grano y recalcular el tiempo.", responsable: PRODUCTOR}
     evidencias:
-      - {dato: temperatura_almacen, es: [CALIDA, MUY_CALIDA]}
-      - {dato: temperatura_grano_aplicable, es: [CALIDA, MUY_CALIDA]}
+      - {dato: temperatura_almacen, op: GTE, valor: {param: temperatura_alerta}}
+      - {dato: temperatura_grano_aplicable, op: GTE, valor: {param: temperatura_alerta}}
 
   - id: R09
     aplica_si: {aportado: temperatura_grano_previa}
     si:
       todos:
         - {es_verdadero: {definicion: lecturas_termicas_comparables}}
-        - {difuso: aumento_termico, es: AUMENTO}
+        - {diferencia: [temperatura_grano, temperatura_grano_previa], op: GTE, valor: {param: aumento_termico_alerta}}
     entonces:
       hallazgo: PUNTO_CALIENTE_SOSPECHADO
       solicitudes: [CORRECCION]
@@ -675,33 +645,33 @@ reglas:
     si:
       todos:
         - {es_verdadero: {definicion: datos_aireacion_completos}}
-        - {difuso: humedad_frente_equilibrio, es: SUPERA}
-        - {difuso: hr_aire_exterior, es: APTA}
+        - {dato: humedad_grano, op: GT, valor: {dato: humedad_equilibrio_maiz}}
+        - {dato: hr_aire_exterior, op: LT, valor: {param: hr_aireacion_max}}
         - {negar: {dato: lluvia_o_niebla}}
-        - {difuso: aire_frente_grano, es: NO_MAS_CALIDO}
+        - {dato: temperatura_aire_exterior, op: LTE, valor: {dato: temperatura_grano}}
     entonces:
       hallazgo: AIREACION_FAVORABLE
-      mensaje: "El aire exterior puede secar el grano sin aumentar su temperatura (grado {grado}). La recomendación queda subordinada a la decisión final."
+      mensaje: "El aire exterior puede secar el grano sin aumentar su temperatura. La recomendación queda subordinada a la decisión final."
     evidencias:
-      - {dato: humedad_grano, variable: humedad_frente_equilibrio, es: SUPERA}
-      - {dato: hr_aire_exterior, es: APTA}
-      - {dato: temperatura_aire_exterior, variable: aire_frente_grano, es: NO_MAS_CALIDO}
+      - {dato: humedad_grano, op: GT, valor: {dato: humedad_equilibrio_maiz}}
+      - {dato: hr_aire_exterior, op: LT, valor: {param: hr_aireacion_max}}
+      - {dato: temperatura_aire_exterior, op: LTE, valor: {dato: temperatura_grano}}
 
   - id: R11
     aplica_si: {contexto: tipo_almacenamiento, igual: NO_HERMETICO}
     si:
       alguno:
-        - {difuso: humedad_frente_equilibrio, es: NO_SUPERA, descripcion: "humedad del grano igual o menor que la de equilibrio"}
-        - {difuso: hr_aire_exterior, es: HUMEDA, descripcion: "aire exterior demasiado húmedo"}
+        - {dato: humedad_grano, op: LTE, valor: {dato: humedad_equilibrio_maiz}, descripcion: "humedad del grano igual o menor que la de equilibrio"}
+        - {dato: hr_aire_exterior, op: GTE, valor: {param: hr_aireacion_max}, descripcion: "aire exterior demasiado húmedo"}
         - {dato: lluvia_o_niebla, descripcion: "lluvia o niebla"}
-        - {difuso: aire_frente_grano, es: MAS_CALIDO, descripcion: "aire exterior más cálido que el grano"}
+        - {dato: temperatura_aire_exterior, op: GT, valor: {dato: temperatura_grano}, descripcion: "aire exterior más cálido que el grano"}
     entonces:
       hallazgo: AIREACION_DESFAVORABLE
       mensaje: "El aire exterior no permite airear sin riesgo de rehumedecer o calentar el grano: {soportes}. Con igualdad de humedad se adopta el criterio conservador."
     evidencias:
-      - {dato: humedad_grano, variable: humedad_frente_equilibrio, es: NO_SUPERA}
-      - {dato: hr_aire_exterior, es: HUMEDA}
-      - {dato: temperatura_aire_exterior, variable: aire_frente_grano, es: MAS_CALIDO}
+      - {dato: humedad_grano, op: LTE, valor: {dato: humedad_equilibrio_maiz}}
+      - {dato: hr_aire_exterior, op: GTE, valor: {param: hr_aireacion_max}}
+      - {dato: temperatura_aire_exterior, op: GT, valor: {dato: temperatura_grano}}
 
   - id: R12
     aplica_si: {contexto: tipo_almacenamiento, igual: HERMETICO}
@@ -709,7 +679,6 @@ reglas:
       todos:
         - {hecho: HUMEDAD_APTA_BASE}
         - {es_verdadero: {definicion: integridad_hermetica}}
-    salida: BAJA
     entonces:
       hallazgo: PROTECCION_HERMETICA_ACTIVA
       mensaje: "Barrera comprobada con humedad en condición base: mantener sellado y usar control exterior. No demuestra eliminación de insectos."
@@ -765,12 +734,13 @@ reglas:
     aplica_si: {contexto: tipo_almacenamiento, igual: NO_HERMETICO}
     si:
       todos:
-        - {difuso: temperatura_grano_aplicable, es: [TEMPLADA, CALIDA]}
+        - {dato: temperatura_grano_aplicable, op: GTE, valor: {param: insectos_temperatura_min}}
+        - {dato: temperatura_grano_aplicable, op: LTE, valor: {param: insectos_temperatura_max}}
     entonces:
       hallazgo: AMBIENTE_FAVORABLE_A_INSECTOS
       solicitudes: [MONITOREO]
-      mensaje: "Temperatura del grano favorable a insectos ({param:insectos_temperatura_min}–{param:insectos_temperatura_max} °C) con grado {grado}: riesgo ambiental, no infestación."
-    evidencias: [{dato: temperatura_grano_aplicable, es: [TEMPLADA, CALIDA]}]
+      mensaje: "Temperatura del grano entre {param:insectos_temperatura_min} y {param:insectos_temperatura_max} °C: riesgo ambiental, no infestación."
+    evidencias: [{dato: temperatura_grano_aplicable, op: GTE, valor: {param: insectos_temperatura_min}}]
 
   - id: R17
     si:
@@ -933,7 +903,7 @@ reglas:
     etapa: tiempo
     si:
       alguno:
-        - {difuso: vida_consumida, es: AGOTADA, descripcion: "vida consumida agotada"}
+        - {calculo: vida_consumida, op: GTE, valor: {param: vida_limite}, descripcion: "vida consumida agotada"}
         - {calculo: vida_minima_documentada, op: GTE, valor: {param: vida_limite}, descripcion: "vida mínima documentada agotada"}
         - todos:
             - {contexto: clima_calido}
@@ -951,7 +921,8 @@ reglas:
     si:
       todos:
         - {negar: {hecho: VIDA_O_PLAZO_AGOTADO}}
-        - {difuso: vida_consumida, es: PROXIMA}
+        - {calculo: vida_consumida, op: GTE, valor: {param: vida_alerta}}
+        - {calculo: vida_consumida, op: LT, valor: {param: vida_limite}}
     entonces:
       hallazgo: VIDA_ESTIMADA_PROXIMA_AL_LIMITE
       solicitudes: [MONITOREO]
@@ -1328,39 +1299,28 @@ datos_exigibles:
 resolucion:
   - rama: R30.1
     decision: CUARENTENA
-    corte: {param: corte_grave}
     si: {solicitud: CUARENTENA}
   - rama: R30.2
     decision: BLOQUEAR_INGRESO
-    corte: {param: corte_grave}
     si: {todos: [{solicitud: SUSPENSION}, {contexto: fase, igual: INGRESO}]}
   - rama: R30.3
     decision: RETIRAR_LOTE
-    corte: {param: corte_grave}
     si: {todos: [{solicitud: SUSPENSION}, {contexto: fase, igual: SEGUIMIENTO}]}
   - rama: R30.4
     decision: CORREGIR_Y_REEVALUAR
-    corte: {param: corte_correccion}
     si: {solicitud: CORRECCION}
   - rama: R30.5
     decision: SIN_CONCLUSION_AUTOMATICA
     si: {pendientes: true}
   - rama: R30.6
     decision: AUTORIZAR_CON_MONITOREO
-    corte: {param: corte_autorizacion}
     si:
       todos:
         - {es_verdadero: {definicion: condiciones_comunes_aptas}, descripcion: "condiciones comunes aptas"}
         - {es_verdadero: {calculo: plazo_compatible}, descripcion: "plazo compatible"}
-        # Explícito por el modelo difuso: rama_condicional_admisible es una
-        # implicación y, con antecedente parcial α, vale máx(1 - α, requisitos).
-        # La rama exige que la banda condicional SE CUMPLA (en la lógica nítida,
-        # es_verdadero de una implicación con antecedente falso ya es FALSO).
-        - {hecho: HUMEDAD_CONDICIONAL, descripcion: "humedad en la banda condicional"}
         - {es_verdadero: {definicion: rama_condicional_admisible}, descripcion: "banda condicional admisible"}
   - rama: R30.7
     decision: AUTORIZAR_CON_MONITOREO
-    corte: {param: corte_autorizacion}
     si:
       todos:
         - {es_verdadero: {definicion: condiciones_comunes_aptas}, descripcion: "condiciones comunes aptas"}
@@ -1371,7 +1331,6 @@ resolucion:
         - {es_verdadero: {calculo: plan_vigente}, descripcion: "plan de monitoreo vigente"}
   - rama: R30.8
     decision: AUTORIZAR_ALMACENAMIENTO
-    corte: {param: corte_autorizacion}
     si:
       todos:
         - {es_verdadero: {definicion: condiciones_comunes_aptas}, descripcion: "condiciones comunes aptas"}
@@ -1385,158 +1344,3 @@ resolucion:
     mensaje: "No hay una fila aplicable: se informa la condición que impide resolver y se deriva a revisión."
 
 decisiones_autorizadas: [AUTORIZAR_ALMACENAMIENTO, AUTORIZAR_CON_MONITOREO]
-
-# ----------------------------------------------------------------------------
-# Sistema de inferencia difusa tipo Mamdani — sección 13
-# ----------------------------------------------------------------------------
-# Principio de anclaje: cada umbral publicado es el ancla de su variable. La
-# rampa de ancho δ se coloca del lado seguro, de modo que un término adverso
-# alcanza μ = 1 exactamente donde la regla nítida dispara y un término favorable
-# se degrada antes del umbral (μ_adverso >= χ_adverso, μ_favorable <= χ_favorable).
-# `umbral_en` indica a qué término pertenece el umbral cuando δ = 0, y reproduce
-# el operador nítido original (<= o <). Las particiones son de Ruspini: Σ μ = 1.
-#
-# Solo se fuzzifican variables físicas continuas sin frontera natural. Los
-# booleanos observados, las categorías, los límites normativos (estiba, Codex,
-# suciedad animal), las fechas, los plazos y la tabla NDSU siguen siendo nítidos.
-inferencia_difusa:
-  teoria:
-    t_norma: MINIMO
-    t_conorma: MAXIMO
-    negacion: ESTANDAR
-    implicacion: MAMDANI
-    composicion: SUP_MIN
-    agregacion: MAXIMO
-    defuzzificacion: CENTROIDE
-  puntos: 1001
-
-  variables:
-    humedad_grano:
-      descripcion: "Humedad del grano (b.h.): APTA_BASE = L lineal, CONDICIONAL = trapezoidal, NO_APTA = Γ lineal"
-      fuente: {dato: humedad_grano}
-      unidad: PCT_BH
-      universo: [0, 100]
-      cortes:
-        - {umbral: {param: humedad_base_max},     ancho: {param: transicion_humedad}, lado_seguro: INFERIOR, umbral_en: INFERIOR}
-        - {umbral: {param: humedad_admision_max}, ancho: {param: transicion_humedad}, lado_seguro: INFERIOR, umbral_en: INFERIOR}
-      terminos: [APTA_BASE, CONDICIONAL, NO_APTA]
-
-    temperatura_almacen: &temperatura
-      descripcion: "Temperatura (°C): FRIA = L lineal, TEMPLADA y CALIDA = trapezoidales, MUY_CALIDA = Γ lineal"
-      fuente: {dato: temperatura_almacen}
-      unidad: CELSIUS
-      universo: [-20, 60]
-      cortes:
-        - {umbral: {param: insectos_temperatura_min}, ancho: {param: transicion_temperatura}, lado_seguro: INFERIOR, umbral_en: SUPERIOR}
-        - {umbral: {param: temperatura_alerta},       ancho: {param: transicion_temperatura}, lado_seguro: INFERIOR, umbral_en: SUPERIOR}
-        - {umbral: {param: insectos_temperatura_max}, ancho: {param: transicion_temperatura}, lado_seguro: SUPERIOR, umbral_en: INFERIOR}
-      terminos: [FRIA, TEMPLADA, CALIDA, MUY_CALIDA]
-
-    temperatura_grano_aplicable:
-      <<: *temperatura
-      fuente: {dato: temperatura_grano_aplicable}
-
-    hr_almacen:
-      descripcion: "Humedad relativa del almacén: SECA = L lineal, HUMEDA = Γ lineal"
-      fuente: {dato: hr_almacen}
-      unidad: PCT_HR
-      universo: [0, 100]
-      cortes:
-        - {umbral: {param: hr_almacen_max}, ancho: {param: transicion_hr}, lado_seguro: INFERIOR, umbral_en: SUPERIOR}
-      terminos: [SECA, HUMEDA]
-
-    hr_aire_exterior:
-      descripcion: "Humedad relativa del aire de ventilación: APTA = L lineal, HUMEDA = Γ lineal"
-      fuente: {dato: hr_aire_exterior}
-      unidad: PCT_HR
-      universo: [0, 100]
-      cortes:
-        - {umbral: {param: hr_aireacion_max}, ancho: {param: transicion_hr}, lado_seguro: INFERIOR, umbral_en: SUPERIOR}
-      terminos: [APTA, HUMEDA]
-
-    actividad_agua:
-      descripcion: "Actividad de agua: SEGURA = L lineal, ALERTA = Γ lineal"
-      fuente: {dato: actividad_agua}
-      unidad: FRACCION
-      universo: [0, 1]
-      cortes:
-        - {umbral: {param: aw_alerta}, ancho: {param: transicion_aw}, lado_seguro: INFERIOR, umbral_en: SUPERIOR}
-      terminos: [SEGURA, ALERTA]
-
-    vida_consumida:
-      descripcion: "Fracción consumida del tiempo de referencia: HOLGADA, PROXIMA (al límite), AGOTADA"
-      fuente: {calculo: vida_consumida}
-      unidad: FRACCION
-      universo: [0, 5]
-      cortes:
-        - {umbral: {param: vida_alerta}, ancho: {param: transicion_vida}, lado_seguro: INFERIOR, umbral_en: SUPERIOR}
-        - {umbral: {param: vida_limite}, ancho: {param: transicion_vida}, lado_seguro: INFERIOR, umbral_en: SUPERIOR}
-      terminos: [HOLGADA, PROXIMA, AGOTADA]
-
-    # Relaciones difusas de orden sobre la diferencia de dos lecturas.
-    aumento_termico:
-      descripcion: "Relación 'aumento térmico significativo' sobre temperatura_grano - temperatura_grano_previa"
-      fuente: {diferencia: [temperatura_grano, temperatura_grano_previa]}
-      unidad: CELSIUS
-      universo: [-50, 50]
-      cortes:
-        - {umbral: {param: aumento_termico_alerta}, ancho: {param: transicion_aumento_termico}, lado_seguro: INFERIOR, umbral_en: SUPERIOR}
-      terminos: [ESTABLE, AUMENTO]
-
-    humedad_frente_equilibrio:
-      descripcion: "Relación 'grano más húmedo que el equilibrio' sobre humedad_grano - humedad_equilibrio_maiz"
-      fuente: {diferencia: [humedad_grano, humedad_equilibrio_maiz]}
-      unidad: PCT_BH
-      universo: [-100, 100]
-      cortes:
-        - {umbral: 0, ancho: {param: transicion_equilibrio}, lado_seguro: SUPERIOR, umbral_en: INFERIOR}
-      terminos: [NO_SUPERA, SUPERA]
-
-    aire_frente_grano:
-      descripcion: "Relación 'aire exterior más cálido que el grano' sobre temperatura_aire_exterior - temperatura_grano"
-      fuente: {diferencia: [temperatura_aire_exterior, temperatura_grano]}
-      unidad: CELSIUS
-      universo: [-80, 80]
-      cortes:
-        - {umbral: 0, ancho: {param: transicion_aire_grano}, lado_seguro: INFERIOR, umbral_en: INFERIOR}
-      terminos: [NO_MAS_CALIDO, MAS_CALIDO]
-
-  # Variable de salida: los términos del ejercicio FAM del curso.
-  variable_salida:
-    nombre: severidad
-    universo: [0, 100]
-    terminos:
-      BAJA:     {l_lineal: [10, 25]}
-      MODERADA: {triangular: [15, 35, 55]}
-      ALTA:     {triangular: [45, 65, 85]}
-      CRITICA:  {gamma_lineal: [75, 90]}
-
-  # Consecuentes Mamdani. Las reglas favorables declaran `salida: BAJA`.
-  consecuente_por_solicitud: {MONITOREO: MODERADA, CORRECCION: ALTA, SUSPENSION: CRITICA, CUARENTENA: CRITICA}
-
-  # Bandas del índice de severidad (centroide). El índice solo endurece la
-  # decisión estructural de R30; suspensión, bloqueo, retirada y cuarentena
-  # nunca salen del índice.
-  bandas:
-    - {hasta: 25, decision: AUTORIZAR_ALMACENAMIENTO, rama: R30.8}
-    - hasta: 50
-      decision: AUTORIZAR_CON_MONITOREO
-      rama: R30.7
-      requiere: {es_verdadero: {calculo: plan_vigente}}
-      si_no: {decision: CORREGIR_Y_REEVALUAR, rama: R30.4}
-    - {hasta: 100.001, decision: CORREGIR_Y_REEVALUAR, rama: R30.4}
-
-  severidad_decisiones:
-    AUTORIZAR_ALMACENAMIENTO: 1
-    AUTORIZAR_CON_MONITOREO: 2
-    SIN_CONCLUSION_AUTOMATICA: 3
-    CORREGIR_Y_REEVALUAR: 4
-    BLOQUEAR_INGRESO: 5
-    RETIRAR_LOTE: 5
-    CUARENTENA: 6
-
-  # Una solicitud grave que no alcanza el 1-corte se degrada a corrección con su
-  # mismo grado: "60 % no apto" no basta para bloquear, pero sí para corregir.
-  degradacion:
-    solicitudes: {SUSPENSION: CORRECCION, CUARENTENA: CORRECCION}
-    corte: {param: corte_grave}

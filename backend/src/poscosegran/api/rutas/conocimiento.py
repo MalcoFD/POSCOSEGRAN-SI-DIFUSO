@@ -54,6 +54,7 @@ def catalogo(sesion: SesionDep, identidad: IdentidadDep) -> api.Catalogo:
     return api.Catalogo(
         version_parametros=version.version_parametros,
         hash_base=version.hash_contenido,
+        modelo_difuso=base.contenido['operativa'].get('difuso') if base is not None else None,
         parametros=parametros,
         uso_campos={} if base is None else {c: list(r) for c, r in base.uso_de_campos.items()},
         version_base=version.version_base,

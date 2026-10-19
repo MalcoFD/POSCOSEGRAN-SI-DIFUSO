@@ -10,7 +10,10 @@ os.environ.setdefault("POSCOSEGRAN_JWT_JWKS_URL", "https://export.invalid/jwks")
 
 from poscosegran.api.app import crear_app
 from poscosegran.dominio.campos import CAMPOS
+from poscosegran.servicios.inspecciones import CAMPOS_ALMACEN
 
 raiz = Path(__file__).resolve().parents[2]
 (raiz / "docs/openapi.json").write_text(json.dumps(crear_app().openapi(), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 (raiz / "src/campos.json").write_text(json.dumps({k: asdict(v) for k, v in CAMPOS.items()}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+(raiz / "src/alcance-inspeccion.json").write_text(json.dumps(sorted(CAMPOS_ALMACEN), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

@@ -29,7 +29,7 @@ def _cfg(**cambios: object) -> Configuracion:
         "jwt_audiencia": AUDIENCIA,
     }
     base.update(cambios)
-    return Configuracion(**base)  
+    return Configuracion(**base)  # type: ignore[arg-type]
 
 
 def _token(**cambios: object) -> str:

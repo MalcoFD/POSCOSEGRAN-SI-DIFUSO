@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   request,
@@ -9,58 +9,17 @@ import {
   type Schema,
 } from "../api/client"
 import Panel, { Empty, ErrorMessage, Field, Loading } from "../components/Shared"
-import camposJson from "../campos.json"
+import CondicionEditor from "../components/ConstructorReglas"
+import ConsecuenteEditor from "../components/ConsecuenteRegla"
+import useValidacionEnVivo from "../hooks/useValidacionRegla"
 
 type Resultado = Schema["PropuestaResultado"]
 type Version = Schema["VersionConocimientoResumen"]
-type Ficha = Schema["FichaRegla"] & { fuentes: string[] }
 
 const post = <T,>(path: string, body: unknown) =>
   request<T>(path, { method: "POST", body: JSON.stringify(body) })
 
-const OPERADORES = ["GT", "GTE", "LT", "LTE", "EQ", "NEQ"] as const
-const SOLICITUDES = [
-  "CUARENTENA",
-  "SUSPENSION",
-  "CORRECCION",
-  "MONITOREO",
-] as const
-const camposDisponibles = Object.keys(camposJson)
 const ETAPAS = ["encadenamiento"] as const
-const FUNDAMENTOS = ["POLITICA_PROTOTIPO", "TRANSFERIDO", "MIXTO", "PUBLICADO"] as const
-
-function esObjeto(valor: unknown): valor is Record<string, unknown> {
-  return !!valor && typeof valor === "object" && !Array.isArray(valor)
-}
-
-function esAdicional(codigo: string): boolean {
-  return /^R[0-9]{2,}$/.test(codigo) && Number(codigo.slice(1)) >= 31
-}
-
-function codigoDocumental(regla: Record<string, unknown>): string {
-  return String(regla.regla || regla.id || "")
-}
-
-function admiteEditorVisual(nodo: unknown): boolean {
-  if (!esObjeto(nodo)) return false
-  if ("todos" in nodo || "alguno" in nodo) {
-    const hijos = nodo.todos ?? nodo.alguno
-    return Array.isArray(hijos) && hijos.every(admiteEditorVisual)
-  }
-  return "dato" in nodo || "hecho" in nodo || "definicion" in nodo
-}
-
-function fichaVacia(id: string): Ficha {
-  return {
-    id,
-    antecedente: "",
-    consecuente: "",
-    accion: "",
-    fundamento_markdown: "",
-    fundamento: "POLITICA_PROTOTIPO",
-    fuentes: [],
-  }
-}
 
 // ─── Plantilla de regla vacía ──────────────────────────────────────
 function reglaVacia(id = ""): Record<string, unknown> {
@@ -76,254 +35,7 @@ function reglaVacia(id = ""): Record<string, unknown> {
 
 // ─── Mini-componentes del constructor visual ───────────────────────
 
-function CondicionEditor({
-  nodo,
-  onChange,
-}: {
-  nodo: Record<string, unknown>
-  onChange: (n: Record<string, unknown>) => void
-}) {
-  const tipo: string =
-    "todos" in nodo
-      ? "todos"
-      : "alguno" in nodo
-        ? "alguno"
-        : "dato" in nodo
-          ? "dato"
-          : "hecho" in nodo
-            ? "hecho"
-            : "definicion" in nodo
-              ? "definicion"
-              : "dato"
-
-  return (
-    <div className="condicion-editor">
-      <div className="condicion-row">
-        <select
-          value={tipo}
-          onChange={(e) => {
-            const t = e.target.value
-            if (t === "dato")
-              onChange({ dato: "", op: "GT", valor: 0 })
-            else if (t === "hecho") onChange({ hecho: "" })
-            else if (t === "definicion") onChange({ definicion: "" })
-            else if (t === "todos" || t === "alguno")
-              onChange({ [t]: [{ dato: "", op: "GT", valor: 0 }] })
-          }}
-        >
-          <option value="dato">Campo (dato)</option>
-          <option value="hecho">Hecho inferido</option>
-          <option value="definicion">Definición</option>
-          <option value="todos">Todos (AND)</option>
-          <option value="alguno">Alguno (OR)</option>
-        </select>
-      </div>
-      {tipo === "dato" && (
-        <div className="condicion-row">
-          <select
-            value={String(nodo.dato || "")}
-            onChange={(e) => onChange({ ...nodo, dato: e.target.value })}
-          >
-            <option value="">Seleccionar campo</option>
-            {camposDisponibles.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-          <select
-            value={String(nodo.op || "GT")}
-            onChange={(e) => onChange({ ...nodo, op: e.target.value })}
-          >
-            {OPERADORES.map((o) => (
-              <option key={o} value={o}>
-                {o === "GT"
-                  ? ">"
-                  : o === "GTE"
-                    ? "≥"
-                    : o === "LT"
-                      ? "<"
-                      : o === "LTE"
-                        ? "≤"
-                        : o === "EQ"
-                          ? "="
-                          : "≠"}
-              </option>
-            ))}
-          </select>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={String(nodo.valor ?? "")}
-            placeholder="Valor / umbral"
-            onChange={(e) => {
-              const v = e.target.value
-              const num = Number(v.replace(",", "."))
-              onChange({
-                ...nodo,
-                valor: v === "" ? "" : Number.isFinite(num) ? num : v,
-              })
-            }}
-          />
-        </div>
-      )}
-      {tipo === "hecho" && (
-        <input
-          type="text"
-          value={String(nodo.hecho || "")}
-          placeholder="Nombre del hecho"
-          onChange={(e) => onChange({ hecho: e.target.value })}
-        />
-      )}
-      {tipo === "definicion" && (
-        <input
-          type="text"
-          value={String(nodo.definicion || "")}
-          placeholder="Nombre de la definición"
-          onChange={(e) => onChange({ definicion: e.target.value })}
-        />
-      )}
-      {(tipo === "todos" || tipo === "alguno") && (
-        <div className="condicion-hijos">
-          {(Array.isArray(nodo[tipo]) ? (nodo[tipo] as Record<string, unknown>[]) : []).map(
-            (hijo, i) => (
-              <div key={i} className="condicion-hijo">
-                <CondicionEditor
-                  nodo={hijo}
-                  onChange={(updated) => {
-                    const lista = [
-                      ...(nodo[tipo] as Record<string, unknown>[]),
-                    ]
-                    lista[i] = updated
-                    onChange({ [tipo]: lista })
-                  }}
-                />
-                <button
-                  type="button"
-                  className="chip-btn danger"
-                  onClick={() => {
-                    const lista = (
-                      nodo[tipo] as Record<string, unknown>[]
-                    ).filter((_, j) => j !== i)
-                    onChange({ [tipo]: lista.length ? lista : [{ dato: "", op: "GT", valor: 0 }] })
-                  }}
-                >
-                  ✕
-                </button>
-              </div>
-            )
-          )}
-          <button
-            type="button"
-            className="chip-btn"
-            onClick={() =>
-              onChange({
-                [tipo]: [
-                  ...(nodo[tipo] as Record<string, unknown>[]),
-                  { dato: "", op: "GT", valor: 0 },
-                ],
-              })
-            }
-          >
-            + Añadir condición
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function ConsecuenteEditor({
-  entonces,
-  onChange,
-}: {
-  entonces: Record<string, unknown>
-  onChange: (e: Record<string, unknown>) => void
-}) {
-  const solicitudes = Array.isArray(entonces.solicitudes)
-    ? (entonces.solicitudes as string[])
-    : []
-  return (
-    <div className="consecuente-editor">
-      <Field label="Hallazgo (hecho deducido)">
-        <input
-          type="text"
-          value={String(entonces.hallazgo || "")}
-          placeholder="Ej: INFRAESTRUCTURA_CON_FILTRACION"
-          onChange={(e) =>
-            onChange({ ...entonces, hallazgo: e.target.value })
-          }
-        />
-      </Field>
-      <Field label="Solicitudes de acción">
-        <div className="check-group">
-          {SOLICITUDES.map((s) => (
-            <label key={s} className="check">
-              <input
-                type="checkbox"
-                checked={solicitudes.includes(s)}
-                onChange={(e) => {
-                  const next = e.target.checked
-                    ? [...solicitudes, s]
-                    : solicitudes.filter((x) => x !== s)
-                  onChange({ ...entonces, solicitudes: next })
-                }}
-              />
-              {nombre(s)}
-            </label>
-          ))}
-        </div>
-      </Field>
-      <Field label="Mensaje explicativo">
-        <textarea
-          value={String(entonces.mensaje || "")}
-          placeholder="Texto que verá el usuario en el módulo de explicación"
-          onChange={(e) =>
-            onChange({ ...entonces, mensaje: e.target.value })
-          }
-        />
-      </Field>
-    </div>
-  )
-}
-
 // ─── Validación en vivo ────────────────────────────────────────────
-
-function useValidacionEnVivo(definicion: Record<string, unknown> | null, habilitada: boolean) {
-  const [errores, setErrores] = useState<string[]>([])
-  const [validando, setValidando] = useState(false)
-  const [validada, setValidada] = useState(false)
-
-  useEffect(() => {
-    if (!habilitada || !definicion) {
-      setErrores([])
-      setValidada(false)
-      setValidando(false)
-      return
-    }
-    let cancelada = false
-    setValidando(true)
-    setValidada(false)
-    const timer = setTimeout(async () => {
-      try {
-        const r = await post<{ valida: boolean; errores: string[] }>(
-          "/adquisicion/validar-regla", { definicion }
-        )
-        if (!cancelada) {
-          setErrores(r.errores)
-          setValidada(true)
-        }
-      } catch {
-        if (!cancelada) setErrores(["No se pudo validar la regla. Revisa la conexión."])
-      } finally {
-        if (!cancelada) setValidando(false)
-      }
-    }, 600)
-    return () => { cancelada = true; clearTimeout(timer) }
-  }, [definicion, habilitada])
-
-  return { errores, validando, validada }
-}
 
 // ─── Componente principal ──────────────────────────────────────────
 
@@ -361,32 +73,27 @@ export default function Adquisicion() {
   const [motivo, setMotivo] = useState("")
   const [versionParametros, setVersionParametros] = useState("")
   const [versionBase, setVersionBase] = useState("")
+  const [codigoDifuso, setCodigoDifuso] = useState('')
 
   // ─── Estado del editor de reglas ───────────────────────────────
   const [modoRegla, setModoRegla] = useState<"visual" | "codigo">("visual")
   const [reglaActual, setReglaActual] = useState<Record<string, unknown> | null>(null)
-  const [fichaActual, setFichaActual] = useState<Ficha | null>(null)
   const [codigoRegla, setCodigoRegla] = useState("")
   const [reglaId, setReglaId] = useState("")
   const [panelReglas, setPanelReglas] = useState(false)
   const [filtroRegla, setFiltroRegla] = useState("")
-  const [cambiosReglas, setCambiosReglas] = useState<Record<string, Record<string, unknown> | null>>({})
-  const [cambiosFichas, setCambiosFichas] = useState<Record<string, Ficha>>({})
-  const [errorEditor, setErrorEditor] = useState("")
 
   // ─── Estado de la propuesta ────────────────────────────────────
   const [resultado, setResultado] = useState<Resultado | null>(null)
   const [error, setError] = useState<unknown>(null)
   const [busy, setBusy] = useState(false)
-  const [firmaSimulada, setFirmaSimulada] = useState("")
   const [motivoActivacion, setMotivoActivacion] = useState<
     Record<string, string>
   >({})
-  const [motivoDescarte, setMotivoDescarte] = useState<Record<string, string>>({})
 
   // Validación en vivo
-  const { errores: erroresVivo, validando, validada } = useValidacionEnVivo(
-    reglaActual, permitido && panelReglas
+  const { errores: erroresVivo, validando } = useValidacionEnVivo(
+    reglaActual || {}
   )
 
   if (!permitido)
@@ -399,102 +106,52 @@ export default function Adquisicion() {
         </p>
       </Panel>
     )
-  if (catalogo.isLoading || versiones.isLoading || detalle.isLoading) return <Loading />
+  if (catalogo.isLoading || versiones.isLoading) return <Loading />
   const parametros = catalogo.data?.parametros || []
 
   // ─── Sincronización visual ↔ código ────────────────────────────
-  function abrirRegla(regla: Record<string, unknown>, ficha?: Ficha | null) {
-    const copia = structuredClone(regla)
-    const codigo = codigoDocumental(copia)
-    const fichaBase = ficha ?? cambiosFichas[codigo] ?? detalle.data?.fichas.find((f) => f.id === codigo)
-    setReglaActual(copia)
-    setCodigoRegla(JSON.stringify(copia, null, 2))
-    setReglaId(String(copia.id || ""))
-    setFichaActual(fichaBase ? { ...structuredClone(fichaBase), fuentes: [...(fichaBase.fuentes || [])] } : null)
-    setModoRegla(admiteEditorVisual(copia.si) ? "visual" : "codigo")
-    setErrorEditor("")
+  function abrirRegla(regla: Record<string, unknown>) {
+    setReglaActual(regla)
+    setCodigoRegla(JSON.stringify(regla, null, 2))
+    setReglaId(String(regla.id || ""))
     setPanelReglas(true)
   }
 
-  function siguienteId(): string {
-    const ids = [
-      ...(detalle.data?.reglas.map((r) => String(r.id)) || []),
-      ...Object.keys(cambiosReglas),
-    ]
-    const maximo = Math.max(30, ...ids.map((id) => {
-      const match = /^R([0-9]+)$/.exec(id)
-      return match ? Number(match[1]) : 0
-    }))
-    return `R${String(maximo + 1).padStart(2, "0")}`
-  }
-
-  function sugerirVersion(): void {
-    if (versionBase || !activa) return
-    const partes = /^(.*\.)([0-9]+)$/.exec(activa.version_base)
-    if (!partes) return
-    const usadas = new Set(versiones.data?.map((v) => `${v.version_base}/${v.version_parametros}`))
-    let numero = Number(partes[2]) + 1
-    while (usadas.has(`${partes[1]}${numero}/${versionParametros || activa.version_parametros}`)) numero++
-    setVersionBase(`${partes[1]}${numero}`)
-  }
-
   function nuevaRegla() {
-    const id = siguienteId()
-    abrirRegla(reglaVacia(id), fichaVacia(id))
+    const id =
+      "R" +
+      String(
+        Math.max(
+          30,
+          ...(detalle.data?.reglas.map((r) => {
+            const m = String(r.id).match(/^R(\d+)/)
+            return m ? Number(m[1]) : 0
+          }) || [30])
+        ) + 1
+      ).padStart(2, "0")
+    abrirRegla(reglaVacia(id))
   }
 
   function cargarReglaExistente(id: string) {
-    const regla = cambiosReglas[id] ?? detalle.data?.reglas.find((r) => r.id === id)
-    if (regla) abrirRegla(regla)
+    const regla = detalle.data?.reglas.find(
+      (r) => r.id === id
+    ) as Record<string, unknown> | undefined
+    if (regla) abrirRegla({ ...regla })
   }
 
   function actualizarDesdeVisual(updated: Record<string, unknown>) {
     setReglaActual(updated)
     setCodigoRegla(JSON.stringify(updated, null, 2))
-    setErrorEditor("")
   }
 
   function actualizarDesdeCodigo(code: string) {
     setCodigoRegla(code)
     try {
       const parsed = JSON.parse(code)
-      if (!esObjeto(parsed)) throw new Error("La definición debe ser un objeto JSON")
       setReglaActual(parsed)
-      setErrorEditor("")
     } catch {
-      setReglaActual(null)
-      setErrorEditor("El JSON de la regla no es válido")
+      // JSON inválido: el modo código mostrará el error
     }
-  }
-
-  function aplicarRegla() {
-    if (!reglaActual || String(reglaActual.id || "") !== reglaId) {
-      setErrorEditor("El identificador de la regla no debe cambiarse")
-      return
-    }
-    if (!validada || validando || erroresVivo.length) {
-      setErrorEditor("Corrige los errores de la regla antes de aplicarla")
-      return
-    }
-    const codigo = codigoDocumental(reglaActual)
-    const esNueva = !detalle.data?.reglas.some((r) => r.id === reglaId)
-    if (esNueva && (!esAdicional(reglaId) || codigo !== reglaId)) {
-      setErrorEditor("Una regla nueva debe usar el siguiente código R31+ como ID y ficha")
-      return
-    }
-    if (esNueva && !fichaActual) {
-      setErrorEditor("La regla nueva necesita una ficha documental")
-      return
-    }
-    if (fichaActual && [fichaActual.antecedente, fichaActual.consecuente, fichaActual.accion, fichaActual.fundamento_markdown].some((v) => !v.trim())) {
-      setErrorEditor("Completa el antecedente, consecuente, acción y fundamento de la ficha")
-      return
-    }
-    setCambiosReglas((actuales) => ({ ...actuales, [reglaId]: structuredClone(reglaActual) }))
-    if (fichaActual) setCambiosFichas((actuales) => ({ ...actuales, [codigo]: structuredClone(fichaActual) }))
-    sugerirVersion()
-    setPanelReglas(false)
-    setResultado(null)
   }
 
   // ─── Construcción del cuerpo de la propuesta ───────────────────
@@ -507,31 +164,27 @@ export default function Adquisicion() {
         throw new Error(`El valor de ${k} no es un número`)
       cambios[k] = n
     }
+    const reglas: Record<string, Record<string, unknown> | null> = {}
+    if (panelReglas && reglaActual && reglaId) {
+      reglas[reglaId] = reglaActual
+    }
     return {
       motivo,
       parametros: cambios,
-      reglas: cambiosReglas,
-      fichas: cambiosFichas,
+      reglas,
       version_parametros: versionParametros || null,
       version_base: versionBase || null,
       guardar,
+      difuso: codigoDifuso.trim() ? JSON.parse(codigoDifuso) : null,
     }
   }
-
-  const firmaActual = JSON.stringify({ valores, motivo, versionParametros, versionBase, cambiosReglas, cambiosFichas })
-  const hayCambiosReglas = Object.keys(cambiosReglas).length > 0 || Object.keys(cambiosFichas).length > 0
 
   async function enviar(guardar: boolean) {
     setBusy(true)
     setError(null)
     try {
-      if (panelReglas) throw new Error("Aplica o cancela la edición de la regla antes de continuar")
-      if (guardar && (firmaSimulada !== firmaActual || !resultado?.valida || resultado.version)) {
-        throw new Error("Simula los cambios actuales antes de registrar la propuesta")
-      }
       const r = await post<Resultado>("/adquisicion/propuestas", cuerpo(guardar))
       setResultado(r)
-      if (!guardar) setFirmaSimulada(firmaActual)
       if (r.version) await qc.invalidateQueries({ queryKey: ["versiones"] })
     } catch (err) {
       setError(err)
@@ -549,12 +202,6 @@ export default function Adquisicion() {
       })
       setResultado(null)
       setValores({})
-      setCambiosReglas({})
-      setCambiosFichas({})
-      setVersionBase("")
-      setVersionParametros("")
-      setMotivo("")
-      setFirmaSimulada("")
       await qc.invalidateQueries()
     } catch (err) {
       setError(err)
@@ -563,58 +210,14 @@ export default function Adquisicion() {
     }
   }
 
-  async function descartar(v: Version) {
-    setBusy(true)
-    setError(null)
-    try {
-      await post<Version>(`/adquisicion/versiones/${v.id}/descartar`, { motivo: motivoDescarte[v.id] || "" })
-      await qc.invalidateQueries({ queryKey: ["versiones"] })
-    } catch (err) {
-      setError(err)
-    } finally {
-      setBusy(false)
-    }
+  async function retirarRegla(id: string) {
+    setReglaId(id)
+    setReglaActual(null)
+    setPanelReglas(true)
+    // Al enviar, reglaActual null retira la regla
   }
 
-  function retirarRegla(id: string) {
-    const regla = detalle.data?.reglas.find((r) => r.id === id) ?? cambiosReglas[id]
-    if (!regla) return
-    const codigo = codigoDocumental(regla)
-    if (!esAdicional(codigo)) return
-    if (detalle.data?.reglas.some((r) => r.id === id)) {
-      setCambiosReglas((actuales) => ({ ...actuales, [id]: null }))
-    } else {
-      setCambiosReglas((actuales) => {
-        const copia = { ...actuales }
-        delete copia[id]
-        return copia
-      })
-    }
-    setCambiosFichas((actuales) => {
-      const copia = { ...actuales }
-      delete copia[codigo]
-      return copia
-    })
-    if (reglaId === id) setPanelReglas(false)
-    sugerirVersion()
-    setResultado(null)
-  }
-
-  function deshacerRetiro(id: string) {
-    setCambiosReglas((actuales) => {
-      const copia = { ...actuales }
-      delete copia[id]
-      return copia
-    })
-    setResultado(null)
-  }
-
-  const reglasListado = [
-    ...(detalle.data?.reglas || []).map((r) => cambiosReglas[r.id] || r),
-    ...Object.entries(cambiosReglas)
-      .filter(([id, regla]) => regla && !detalle.data?.reglas.some((r) => r.id === id))
-      .map(([, regla]) => regla!),
-  ]
+  const reglasListado = detalle.data?.reglas || []
   const reglasFiltradas = filtroRegla
     ? reglasListado.filter(
         (r) =>
@@ -646,7 +249,7 @@ export default function Adquisicion() {
         futuras. Las evaluaciones ya emitidas conservan la versión con que se
         resolvieron.
       </p>
-      <ErrorMessage error={error || catalogo.error || versiones.error || detalle.error} />
+      <ErrorMessage error={error || catalogo.error || versiones.error} />
 
       {/* ── 1. Proponer cambios de parámetros ────────────────────── */}
       <Panel title="1. Proponer cambios de parámetros">
@@ -702,6 +305,12 @@ export default function Adquisicion() {
         </div>
       </Panel>
 
+      {catalogo.data?.modelo_difuso && <Panel title="Modelo Mamdani: pertenencias y política">
+        <p>Las curvas, los módulos y los cortes forman parte de una versión de conocimiento. Cualquier cambio debe simularse, justificarse y activarse con revisión.</p>
+        <div className="actions"><button onClick={() => setCodigoDifuso(JSON.stringify(catalogo.data?.modelo_difuso, null, 2))}>Preparar edición del modelo vigente</button><button disabled={!codigoDifuso} onClick={() => setCodigoDifuso('')}>Descartar cambios del modelo</button></div>
+        {codigoDifuso && <Field label="Modelo Mamdani propuesto (JSON)"><textarea className="code-editor" rows={18} value={codigoDifuso} onChange={e => setCodigoDifuso(e.target.value)} spellCheck={false}/></Field>}
+        <p className="muted">La validación del servidor comprueba conjuntos, dominios, cobertura y referencias. El impacto usa el motor correspondiente a cada versión, incluido Mamdani.</p>
+      </Panel>}
       {/* ── 2. Gestión de reglas de producción ────────────────────── */}
       <Panel title="2. Reglas de producción">
         <div className="reglas-toolbar">
@@ -711,7 +320,7 @@ export default function Adquisicion() {
             value={filtroRegla}
             onChange={(e) => setFiltroRegla(e.target.value)}
           />
-          <button className="primary" onClick={nuevaRegla} disabled={!detalle.data}>
+          <button className="primary" onClick={nuevaRegla}>
             + Añadir nueva regla
           </button>
         </div>
@@ -761,14 +370,6 @@ export default function Adquisicion() {
                   </td>
                   <td>
                     <div className="actions-inline">
-                      {Object.prototype.hasOwnProperty.call(cambiosReglas, String(r.id)) && (
-                        <span className="chip cambio">
-                          {cambiosReglas[String(r.id)] === null ? "Retiro pendiente" : "Cambio pendiente"}
-                        </span>
-                      )}
-                      {cambiosReglas[String(r.id)] === null ? (
-                        <button onClick={() => deshacerRetiro(String(r.id))}>Deshacer</button>
-                      ) : <>
                       <button
                         onClick={() => cargarReglaExistente(String(r.id))}
                       >
@@ -776,25 +377,19 @@ export default function Adquisicion() {
                       </button>
                       <button
                         onClick={() => {
-                          const id = siguienteId()
-                          const copia = structuredClone(r)
-                          copia.id = id
-                          copia.regla = id
-                          const original = detalle.data?.fichas.find((f) => f.id === codigoDocumental(r))
-                          abrirRegla(copia, original ? { ...structuredClone(original), id, fuentes: [...(original.fuentes || [])] } : fichaVacia(id))
+                          const copia = JSON.parse(JSON.stringify(r))
+                          copia.id = String(r.id) + "_copia"
+                          abrirRegla(copia)
                         }}
                       >
                         Duplicar
                       </button>
                       <button
                         className="danger"
-                        disabled={!esAdicional(codigoDocumental(r))}
-                        title={!esAdicional(codigoDocumental(r)) ? "Las reglas base no se pueden retirar" : undefined}
                         onClick={() => retirarRegla(String(r.id))}
                       >
                         Retirar
                       </button>
-                      </>}
                     </div>
                   </td>
                 </tr>
@@ -805,7 +400,6 @@ export default function Adquisicion() {
         {reglasListado.length === 0 && (
           <Empty>No hay reglas cargadas en la versión activa.</Empty>
         )}
-        {hayCambiosReglas && <p className="message">Hay cambios de reglas pendientes. Simula el impacto y registra una propuesta para conservarlos.</p>}
       </Panel>
 
       {/* ── 3. Editor híbrido de regla ────────────────────────────── */}
@@ -834,7 +428,13 @@ export default function Adquisicion() {
                   <input
                     type="text"
                     value={String(reglaActual.id || "")}
-                    readOnly
+                    onChange={(e) =>
+                      actualizarDesdeVisual({
+                        ...reglaActual,
+                        id: e.target.value,
+                        regla: e.target.value,
+                      })
+                    }
                   />
                 </Field>
                 <Field label="Etapa">
@@ -896,45 +496,6 @@ export default function Adquisicion() {
             </div>
           )}
 
-          {fichaActual && (
-            <div className="stack">
-              <h3>Ficha documental {fichaActual.id}</h3>
-              <p className="muted">Describe y fundamenta el cambio que quedará en el catálogo de conocimiento.</p>
-              <div className="form-grid">
-                <Field label="Antecedente documentado">
-                  <textarea value={fichaActual.antecedente} onChange={(e) => setFichaActual({ ...fichaActual, antecedente: e.target.value })} />
-                </Field>
-                <Field label="Consecuente documentado">
-                  <textarea value={fichaActual.consecuente} onChange={(e) => setFichaActual({ ...fichaActual, consecuente: e.target.value })} />
-                </Field>
-                <Field label="Acción recomendada">
-                  <textarea value={fichaActual.accion} onChange={(e) => setFichaActual({ ...fichaActual, accion: e.target.value })} />
-                </Field>
-                <Field label="Tipo de fundamento">
-                  <select value={fichaActual.fundamento} onChange={(e) => setFichaActual({ ...fichaActual, fundamento: e.target.value as Ficha["fundamento"] })}>
-                    {FUNDAMENTOS.map((f) => <option key={f} value={f}>{nombre(f)}</option>)}
-                  </select>
-                </Field>
-              </div>
-              <Field label="Fundamento y referencias">
-                <textarea value={fichaActual.fundamento_markdown} onChange={(e) => setFichaActual({ ...fichaActual, fundamento_markdown: e.target.value })} placeholder="Explica la evidencia y cita sus fuentes" />
-              </Field>
-              <Field label="Fuentes del catálogo">
-                <div className="check-group">
-                  {catalogo.data?.fuentes.map((fuente) => (
-                    <label key={fuente.id} className="check">
-                      <input type="checkbox" checked={fichaActual.fuentes.includes(fuente.id)} onChange={(e) => setFichaActual({
-                        ...fichaActual,
-                        fuentes: e.target.checked ? [...fichaActual.fuentes, fuente.id] : fichaActual.fuentes.filter((id) => id !== fuente.id),
-                      })} />
-                      {fuente.id}
-                    </label>
-                  ))}
-                </div>
-              </Field>
-            </div>
-          )}
-
           {/* Errores de validación en vivo */}
           {erroresVivo.length > 0 && (
             <div className="aviso">
@@ -946,17 +507,14 @@ export default function Adquisicion() {
               </ul>
             </div>
           )}
-          {erroresVivo.length === 0 && reglaActual && validada && !validando && (
+          {erroresVivo.length === 0 && reglaActual && !validando && (
             <p className="message" style={{ color: "var(--ok)" }}>
               ✓ La regla es sintácticamente correcta
             </p>
           )}
 
-          {errorEditor && <p className="aviso" role="alert">{errorEditor}</p>}
-
           <div className="actions">
-            <button className="primary" disabled={busy || validando || !reglaActual} onClick={aplicarRegla}>Aplicar cambio a la propuesta</button>
-            <button onClick={() => { setPanelReglas(false); setErrorEditor("") }}>Cancelar edición</button>
+            <button onClick={() => setPanelReglas(false)}>Cerrar editor</button>
           </div>
           <p className="muted">
             Un cambio de reglas exige una nueva versión de la base. El validador
@@ -966,7 +524,7 @@ export default function Adquisicion() {
       )}
 
       {/* ── 4. Versión y motivo ───────────────────────────────────── */}
-      <Panel title="3. Versión y envío">
+      <Panel title={panelReglas ? "4. Versión y envío" : "3. Versión y envío"}>
         <div className="form-grid">
           <Field label="Motivo del cambio (obligatorio)">
             <textarea
@@ -984,7 +542,7 @@ export default function Adquisicion() {
               placeholder={`Actual ${activa?.version_parametros}`}
             />
           </Field>
-          {(panelReglas || hayCambiosReglas) && (
+          {panelReglas && (
             <Field label="Nueva versión de la base">
               <input
                 value={versionBase}
@@ -995,12 +553,12 @@ export default function Adquisicion() {
           )}
         </div>
         <div className="actions">
-          <button disabled={busy || panelReglas} onClick={() => void enviar(false)}>
+          <button disabled={busy} onClick={() => void enviar(false)}>
             {busy ? "Evaluando casos…" : "Simular impacto"}
           </button>
           <button
             className="primary"
-            disabled={busy || panelReglas || !resultado?.valida || !!resultado.version || firmaSimulada !== firmaActual}
+            disabled={busy || !resultado?.valida}
             onClick={() => void enviar(true)}
           >
             Registrar propuesta
@@ -1011,7 +569,6 @@ export default function Adquisicion() {
           emitidas con la versión activa y con la propuesta. Puede tardar unos
           segundos.
         </p>
-        {panelReglas && <p className="muted">Aplica o cancela la edición abierta para continuar.</p>}
       </Panel>
 
       {/* ── Validación e impacto ──────────────────────────────────── */}
@@ -1180,13 +737,6 @@ export default function Adquisicion() {
                     >
                       Activar esta versión
                     </button>
-                  </div>
-                  <p className="muted">La activación requiere otra cuenta de ingeniería. En local, inicia sesión como <code>revisor</code> con la contraseña configurada.</p>
-                  <Field label="Motivo del descarte">
-                    <input value={motivoDescarte[v.id] || ""} onChange={(e) => setMotivoDescarte((m) => ({ ...m, [v.id]: e.target.value }))} placeholder="Razón para cerrar esta propuesta" />
-                  </Field>
-                  <div className="actions">
-                    <button className="danger" disabled={busy || (motivoDescarte[v.id] || "").trim().length < 15} onClick={() => void descartar(v)}>Descartar propuesta</button>
                   </div>
                 </div>
               )}

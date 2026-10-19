@@ -113,7 +113,7 @@ try {
     Paso 'Contrato generado' {
         & $python backend/scripts/exportar_contrato.py
         if ($LASTEXITCODE -eq 0) { pnpm api:types }
-        if ($LASTEXITCODE -eq 0) { git diff --exit-code -- docs/openapi.json src/api/contrato.ts src/campos.json }
+        if ($LASTEXITCODE -eq 0) { git diff --exit-code -- docs/openapi.json src/api/contrato.ts src/campos.json src/alcance-inspeccion.json }
     }
 
     Paso 'Lint del frontend' { pnpm lint }

@@ -75,6 +75,9 @@ small { display:block; color:#686156; font-size:12px; margin-top:4px; }
 .muted { color:#6a645b; }
 .stack { display:flex; flex-direction:column; gap:20px; }
 .stack.compact { gap:10px; margin-top:12px; }
+.fuzzy-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr)); gap:24px; }
+.fuzzy-grid section { min-width:0; }
+.fuzzy-grid svg { width:100%; color:var(--color-forest); }
 .panel { background:white; border:1px solid #E2DDD5; border-radius:16px; padding:24px; min-width:0; }
 .panel > p + p { margin-top:12px; }
 .page-heading { display:flex; justify-content:space-between; align-items:center; gap:20px; }
@@ -117,7 +120,9 @@ a { color:#245c3e; text-decoration:underline; }
 .decision.authorized { background:#e8f0eb; border-color:#b8d1be; }
 .decision.danger { background:#fff0ed; border-color:#e5b7b0; }
 .decision.danger h2 { color:#a32f22; }
-.steps { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; }
+.steps { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; }
+.capture-field.historical { background:var(--color-forest-light); }
+.historical-note { color:var(--color-forest); margin-bottom:10px; }
 .steps button { padding:12px 8px; text-align:left; }
 .steps span { display:block; font-size:11px; margin-top:4px; }
 .sticky-actions { position:sticky; bottom:0; background:#FBF9F4; padding:16px 0; border-top:1px solid #E2DDD5; }
@@ -176,3 +181,12 @@ a { color:#245c3e; text-decoration:underline; }
 .actions-inline button { font-size:12px; padding:3px 8px; }
 .actions-inline button.danger { color:var(--color-crit); }
 tr.modificado { background:#fffaf0; }
+
+/* Mediciones principales del lote: separadas de evidencia y restricciones. */
+.fuzzy-intro { border-left:4px solid var(--color-forest); padding:16px 20px; background:var(--color-forest-light); border-radius:0 10px 10px 0; }
+.fuzzy-intro h3 { margin:8px 0; font-size:21px; }
+.capture-group { border:1px solid var(--color-divider); padding:16px; border-radius:10px; }
+.capture-group > summary { font-weight:600; cursor:pointer; }
+.capture-group > p { margin:12px 0; color:#5f6b63; }
+.fuzzy-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr)); gap:24px; }
+.fuzzy-grid svg { width:100%; height:auto; }

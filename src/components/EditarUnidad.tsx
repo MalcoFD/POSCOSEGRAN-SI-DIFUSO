@@ -6,7 +6,7 @@ import { ErrorMessage, Field } from './Shared'
 export default function EditarUnidad({ unidad }: { unidad: Unidad }) {
   const [open, setOpen] = useState(false)
   const almacen = useQuery({ queryKey: ['almacen', unidad.id_almacen], queryFn: () => request<Schema['Almacen']>(`/almacenes/${unidad.id_almacen}`), enabled: open })
-  return <details onToggle={e => setOpen(e.currentTarget.open)}><summary>Corregir modalidad o clima</summary><ErrorMessage error={almacen.error} />{open && almacen.data && <Editor key={`${unidad.revision}:${almacen.data.revision}`} unidad={unidad} almacen={almacen.data} />}</details>
+  return <details onToggle={e => setOpen(e.currentTarget.open)}><summary>Corregir modalidad o clima</summary><ErrorMessage error={almacen.error} />{almacen.data && <Editor unidad={unidad} almacen={almacen.data} />}</details>
 }
 function Editor({ unidad, almacen }: { unidad: Unidad; almacen: Schema['Almacen'] }) {
   const qc = useQueryClient()

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { list, request, write, nombre, fecha, NOTA_PROTOTIPO, type Schema, type Unidad } from '../api/client'
 import Panel, { Empty, ErrorMessage, Field, Loading } from '../components/Shared'
 import { useAppNavigate } from '../App'
@@ -11,9 +11,11 @@ export default function Dashboard() {
     const [inicio, almacenes, lotes, unidades, perfil] = await Promise.all([
       request<Schema['Inicio']>('/inicio'), list<Schema['Almacen']>('/almacenes'), list<Schema['Lote']>('/lotes'), list<Unidad>('/unidades'), request<Schema['Perfil']>('/me'),
     ])
-    const vigencias = await Promise.all(unidades.map(u => request<Schema['Vigencia']>(`/unidades/${u.id}/vigencia`)))
-    return { inicio, almacenes, lotes, unidades, perfil, vigencias }
+    return { inicio, almacenes, lotes, unidades, perfil }
   } })
+  const vigencias = useQueries({queries:(data.data?.unidades ?? []).map(u=>({
+    queryKey:['vigencia',u.id],queryFn:()=>request<Schema['Vigencia']>(`/unidades/${u.id}/vigencia`),staleTime:15000,
+  }))})
   const [form, setForm] = useState({ nombre: '', ubicacion: '', clima: '', fundamento: '', codigo: '', almacen: '', lote: '', recipiente: '', modalidad: '' })
   const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }))
   async function save(e: React.FormEvent, kind: 'almacenes' | 'lotes' | 'unidades') {
@@ -32,6 +34,7 @@ export default function Dashboard() {
   if (data.isLoading) return <Loading />
   if (!data.data) return <ErrorMessage error={data.error} />
   const d = data.data
+  if (!d.perfil.roles.some(r=>r==='PRODUCTOR'||r==='TECNICO')) return <div className="stack"><h1>Inicio</h1><Panel title={d.perfil.roles.includes('ADMINISTRADOR')?'Administración de accesos':'Ingeniería del conocimiento Mamdani'}><p>{d.perfil.roles.includes('ADMINISTRADOR')?'Coordina las asignaciones de técnicos sin acceder al detalle de las evaluaciones de producción.':'Revisa las funciones de pertenencia, las reglas finales y el impacto antes de activar una nueva versión. La evaluación final procede del centroide Mamdani.'}</p><div className="actions"><button onClick={()=>navigate(d.perfil.roles.includes('ADMINISTRADOR')?'configuracion':'adquisicion')}>{d.perfil.roles.includes('ADMINISTRADOR')?'Gestionar asignaciones':'Mantener modelo Mamdani'}</button><button onClick={()=>navigate('conocimiento')}>Revisar conocimiento y fuentes</button></div></Panel></div>
   return <div className="stack"><div className="page-heading"><div><p className="eyebrow">Control del almacenamiento</p><h1>Inicio</h1><p className="muted">Tus unidades, sus condiciones y el próximo paso.</p><p className="nota-prototipo">{NOTA_PROTOTIPO}</p></div>
     <button className="primary" onClick={() => setShow(!show)}>{show ? 'Cerrar registro' : 'Registrar unidad'}</button></div>
     <div className="metrics"><Panel><span>Unidades registradas</span><strong>{d.inicio.unidades_total}</strong></Panel><Panel><span>Cuarentenas abiertas</span><strong>{d.inicio.cuarentenas_abiertas}</strong></Panel><Panel><span>Correcciones pendientes</span><strong>{d.inicio.correcciones_pendientes}</strong></Panel></div>
@@ -53,7 +56,7 @@ export default function Dashboard() {
           <Field label="Modalidad"><select value={form.modalidad} onChange={e => set('modalidad', e.target.value)}><option value="">No se sabe</option><option value="HERMETICO">Hermético</option><option value="NO_HERMETICO">No hermético</option></select></Field>
           <button className="primary" disabled={busy}>Crear unidad y capturar</button></form>
       </div></Panel>}
-    <Panel title="Unidades de almacenamiento">{!d.unidades.length ? <Empty>Aún no tienes unidades. Registra la primera para comenzar.</Empty> : <div className="table-scroll"><table><thead><tr><th>Recipiente</th><th>Modalidad</th><th>Autorización actual</th><th>Próximo control</th><th>Acciones</th></tr></thead><tbody>{d.unidades.map((u, i) => <tr key={u.id}><td><strong>{u.nombre_recipiente}</strong><small>{d.lotes.find(l => l.id === u.id_lote)?.codigo}</small></td><td>{u.tipo_almacenamiento ? nombre(u.tipo_almacenamiento) : 'Sin definir'}</td><td><span className={`badge ${d.vigencias[i].estado === 'VIGENTE' ? 'good' : ''}`}>{nombre(d.vigencias[i].estado)}</span></td><td>{fecha(d.vigencias[i].fecha_proximo_control)}</td><td><div className="actions"><button onClick={() => navigate('evaluacion', u.id)}>Evaluar</button><button onClick={() => navigate('seguimiento', u.id)}>Seguimiento</button>{u.id_evaluacion_actual && <button onClick={() => navigate('resultado', u.id_evaluacion_actual!)}>Resultado</button>}</div></td></tr>)}</tbody></table></div>}</Panel>
+    <Panel title="Unidades de almacenamiento">{!d.unidades.length ? <Empty>Aún no tienes unidades. Registra la primera para comenzar.</Empty> : <div className="table-scroll"><table><thead><tr><th>Recipiente</th><th>Modalidad</th><th>Autorización actual</th><th>Próximo control</th><th>Acciones</th></tr></thead><tbody>{d.unidades.map((u, i) => {const v=vigencias[i];return <tr key={u.id}><td><strong>{u.nombre_recipiente}</strong><small>{d.lotes.find(l => l.id === u.id_lote)?.codigo}</small></td><td>{u.tipo_almacenamiento ? nombre(u.tipo_almacenamiento) : 'Sin definir'}</td><td><span className={`badge ${v?.data?.estado === 'VIGENTE' ? 'good' : ''}`}>{v?.data ? nombre(v.data.estado) : v?.error ? 'No disponible' : 'Consultando…'}</span></td><td>{fecha(v?.data?.fecha_proximo_control ?? null)}</td><td><div className="actions"><button onClick={() => navigate('evaluacion', u.id)}>Evaluar</button><button onClick={() => navigate('seguimiento', u.id)}>Seguimiento</button>{u.id_evaluacion_actual && <button onClick={() => navigate('resultado', u.id_evaluacion_actual!)}>Resultado</button>}</div></td></tr>})}</tbody></table></div>}</Panel>
     <Panel title="Controles próximos">{d.inicio.controles_proximos.length ? d.inicio.controles_proximos.map(c => <div key={c.id_unidad} className="row"><span>{c.nombre} · {fecha(c.fecha)} · {nombre(c.estado)}</span><button onClick={() => navigate('seguimiento', c.id_unidad)}>Registrar control</button></div>) : <Empty>No hay controles programados.</Empty>}</Panel>
   </div>
 }

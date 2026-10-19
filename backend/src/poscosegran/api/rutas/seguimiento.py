@@ -26,7 +26,6 @@ from ...db.modelos import (
 from ...esquemas import contrato as api
 from ...seguridad.dependencias import IdentidadDep, SesionDep
 from ...seguridad.permisos import (
-    AmbitoUnidad,
     RecursoInaccesible,
     exigir_acceso_incidencia,
     exigir_acceso_unidad,
@@ -38,6 +37,7 @@ from ..dependencias import ClaveIdempotencia, completar, reservar
 
 enrutador = APIRouter(prefix="/api/v1", tags=["seguimiento"])
 
+# Campos que cada tipo de control debe cubrir para considerarse completo.
 REQUISITOS_CONTROL: dict[str, tuple[str, ...]] = {
     "INGRESO": (
         "humedad_grano", "metodo_humedad", "temperatura_grano", "recipiente_limpio",
@@ -54,9 +54,7 @@ REQUISITOS_CONTROL: dict[str, tuple[str, ...]] = {
 }
 
 
-def _revisiones(
-    sesion: SesionDep, identidad: IdentidadDep, id_unidad: uuid.UUID, entrada: api.Revisiones,
-) -> AmbitoUnidad:
+def _revisiones(sesion: SesionDep, identidad: IdentidadDep, id_unidad: uuid.UUID, entrada: api.Revisiones):  # type: ignore[no-untyped-def]
     ambito = exigir_acceso_unidad(sesion, identidad, id_unidad, escritura=True)
     concurrencia.exigir_revisiones_unidad(
         revision_unidad_vigente=ambito.revision_unidad,
@@ -154,6 +152,7 @@ def registrar_control(
     filas_obs = [observaciones.a_fila(observacion, id_unidad=id_unidad,
                   id_responsable=identidad.id, id_control=fila.id)
                   for observacion in entrada.observaciones]
+    # Un control con hallazgo adverso abre un episodio aunque no se evalúe aún.
     from ...servicios import evaluaciones
     from ...dominio import motor
     unidad = sesion.get(Unidad, id_unidad)

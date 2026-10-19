@@ -1,7 +1,7 @@
 [project]
 name = "poscosegran-backend"
-version = "0.7.0"
-description = "POSCOSEGRAN — sistema experto difuso Mamdani para condiciones de almacenamiento poscosecha de maíz chulpi."
+version = "0.6.0"
+description = "POSCOSEGRAN — persistencia y seguridad (etapa 6). El motor y la API del contrato corresponden a la etapa 7."
 requires-python = ">=3.13"
 dependencies = [
   "fastapi==0.115.6",

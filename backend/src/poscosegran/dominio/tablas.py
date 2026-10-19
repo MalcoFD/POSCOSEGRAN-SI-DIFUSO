@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from ..sistema_experto import base_conocimiento
-from ..sistema_experto.base_conocimiento import Celda
+from ..inferencia import base_conocimiento
+from ..inferencia.base_conocimiento import Celda
 
 
 def seleccionar(humedad: Decimal, temperatura_c: Decimal) -> Celda | None:

@@ -29,12 +29,15 @@ class Configuracion(BaseSettings):
     idempotencia_horas_retencion: int = Field(default=24, ge=1)
     auth_local_habilitada: bool = False
     auth_local_password: str | None = Field(default=None, repr=False)
+    # Separación de funciones en adquisición: quien propone una versión no la activa.
+    # La excepción existe para demostrar el ciclo completo con una sola cuenta en un
+    # entorno de desarrollo; el validador de abajo la prohíbe en producción.
     adquisicion_permitir_autoactivacion: bool = False
 
     @field_validator("bd_url_app", mode="before")
     @classmethod
     def normalizar_url_postgres(cls, valor: object) -> object:
-        """Render publica URLs postgres://; SQLAlchemy necesita el driver psycopg."""
+        """Acepta las URL que publica Render con el driver Psycopg del proyecto."""
         if isinstance(valor, str):
             if valor.startswith("postgres://"):
                 return "postgresql+psycopg://" + valor.removeprefix("postgres://")

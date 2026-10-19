@@ -1,1 +1,1 @@
-from .contrato import *  # noqa: F403 -- reexportación pública del contrato
+from .contrato import *  # noqa: F401,F403

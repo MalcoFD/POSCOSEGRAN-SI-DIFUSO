@@ -28,15 +28,14 @@ Decision = Literal[
     "AUTORIZAR_CON_MONITOREO",
     "AUTORIZAR_ALMACENAMIENTO",
 ]
-Rama = Literal["R30.1", "R30.2", "R30.3", "R30.4", "R30.5", "R30.6", "R30.7", "R30.8", "R30.9"]
+Rama = Literal["MAMDANI_FINAL", "R30.1", "R30.2", "R30.3", "R30.4", "R30.5", "R30.6", "R30.7", "R30.8", "R30.9"]
 UnidadDato = Literal[
     "PCT_BH", "PCT_HR", "PCT_MASA", "CELSIUS", "METROS", "DIAS", "FRACCION", "BOOLEANO", "TEXTO"
 ]
 EstadoDato = Literal["VALIDO", "DESCONOCIDO", "INVALIDO", "VENCIDO"]
 EstadoVigencia = Literal["VIGENTE", "VENCIDA", "INVALIDADA", "NO_AUTORIZADO", "SIN_EVALUACION"]
 Captura = Literal["APORTADO", "DESCONOCIDO", "NO_APLICA"]
-Operador = Literal["GT", "GTE", "LT", "LTE", "EQ", "NEQ", "PRESENCIA", "VIGENCIA", "PERTENENCIA"]
-OrigenDecision = Literal["NITIDO", "VETO", "CORTE_ALFA", "INDICE", "PENDIENTES"]
+Operador = Literal["GT", "GTE", "LT", "LTE", "EQ", "NEQ", "PRESENCIA", "VIGENCIA"]
 Fundamento = Literal["PUBLICADO", "TRANSFERIDO", "POLITICA_PROTOTIPO", "MIXTO"]
 TipoControl = Literal["INGRESO", "GRANO", "EXTERIOR", "ALMACEN"]
 
@@ -260,8 +259,6 @@ class EvidenciaMotivo(Base):
     fecha_observacion: AwareDatetime | None
     operador: Operador | None
     umbral: StrictFloat | StrictInt | StrictBool | StrictStr | None
-    termino: str | None = Field(default=None, description="Término lingüístico evaluado (operador PERTENENCIA).")
-    grado: float | None = Field(default=None, ge=0, le=1, description="Grado de pertenencia μ del valor observado al término.")
 
 
 class Motivo(Base):
@@ -271,7 +268,6 @@ class Motivo(Base):
     evidencias: list[EvidenciaMotivo]
     fuentes: list[FuenteRef]
     fundamento: Fundamento
-    grado_activacion: float = Field(default=1.0, ge=0, le=1, description="Grado α con que se activó la regla (Modus Ponens Generalizado).")
 
 
 class Accion(Base):
@@ -284,7 +280,7 @@ class Accion(Base):
 class DatoPendiente(Base):
     campo: str
     motivo: str
-    paso: Literal[1, 2, 3, 4, 5, 6]
+    paso: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 
 class Estimacion(Base):
@@ -319,48 +315,6 @@ class Vigencia(Base):
     causas: list[str]
 
 
-class PertenenciaDifusa(Base):
-    variable: str
-    termino: str
-    valor: float | None
-    unidad: str
-    grado: float = Field(ge=0, le=1)
-
-
-class ActivacionDifusa(Base):
-    orden: int
-    produccion: str
-    regla: str
-    etapa: str
-    pasada: int
-    grado_inf: float = Field(ge=0, le=1)
-    grado_sup: float = Field(ge=0, le=1)
-    hallazgo: str | None
-    terminos_salida: list[str]
-
-
-class AlturaSalida(Base):
-    termino: str
-    altura: float = Field(ge=0, le=1)
-
-
-class SalidaDifusa(Base):
-    variable: str
-    metodo: Literal["CENTROIDE"]
-    alturas: list[AlturaSalida] = Field(description="Altura de recorte de cada consecuente (implicación de Mamdani).")
-    indice: float | None = Field(description="Centroide del conjunto agregado; null si el conjunto agregado es vacío.")
-    banda: str | None
-    decision_indice: str | None
-
-
-class InferenciaDifusa(Base):
-    pertenencias: list[PertenenciaDifusa]
-    activaciones: list[ActivacionDifusa]
-    salida: SalidaDifusa
-    origen_decision: OrigenDecision
-    borrosidad: float | None = Field(description="Borrosidad normalizada de la fuzzificación: 0 = nítida, 1 = máxima.")
-
-
 class Evaluacion(Base):
     id: uuid.UUID
     id_unidad: uuid.UUID
@@ -383,14 +337,18 @@ class Evaluacion(Base):
     version_base: str
     version_parametros: str
     version_motor: str
-    inferencia: InferenciaDifusa | None = Field(
-        default=None, description="Sistema de inferencia difusa (Mamdani); null en evaluaciones nítidas."
-    )
+    difuso: dict[str, Any] | None = Field(default=None, description='Traza Mamdani inmutable; los índices no son probabilidades.')
 
 
 class ResultadoEvaluacion(Base):
     evaluacion: Evaluacion
     vigencia: Vigencia
+
+
+class CapturaAnterior(Base):
+    id_evaluacion: uuid.UUID
+    fecha_evaluacion: AwareDatetime
+    contenido: EvaluacionEntrada
 
 
 class ControlEntrada(Revisiones):
@@ -540,14 +498,17 @@ class Catalogo(Base):
     reglas: list[Regla]
     ramas_r30: list[Regla]
     fuentes: list[Fuente]
+    # Extensión del contrato (docs/DECISIONES.md, D-SE-3): la base como datos.
     version_parametros: str | None = None
     hash_base: str | None = None
+    modelo_difuso: dict[str, Any] | None = None
     parametros: list[Parametro] = Field(default_factory=list)
     uso_campos: dict[str, list[str]] = Field(
         default_factory=dict, description="Para cada campo, las reglas que lo usan: «¿por qué se pide este dato?»"
     )
 
 
+# --- Módulo de explicación ----------------------------------------------------------
 
 
 class HechoInicial(Base):
@@ -565,7 +526,6 @@ class PasoExplicacion(Base):
     solicitudes: list[str]
     porque: list[str]
     antecedente: str | None
-    grado: float = Field(default=1.0, ge=0, le=1)
 
 
 class RamaExplicada(Base):
@@ -574,8 +534,6 @@ class RamaExplicada(Base):
     aplicada: bool
     valor: Literal["VERDADERO", "FALSO", "DESCONOCIDO", "NO_APLICA"]
     faltan: list[str]
-    grado: float = Field(default=1.0, ge=0, le=1, description="Grado cierto de la condición de la rama.")
-    corte: float = Field(default=1.0, ge=0, le=1, description="Corte-α que debe alcanzar la rama.")
 
 
 class Explicacion(Base):
@@ -594,10 +552,10 @@ class Explicacion(Base):
     version_base: str
     version_parametros: str
     hash_base: str
-    origen_decision: OrigenDecision = "NITIDO"
-    inferencia: InferenciaDifusa | None = None
+    difuso: dict[str, Any] | None = None
 
 
+# --- Módulo de adquisición ------------------------------------------------------------
 
 
 class VersionConocimientoResumen(Base):
@@ -627,16 +585,6 @@ class CambioRegla(Base):
     tipo: Literal["MODIFICADA", "NUEVA", "RETIRADA"]
 
 
-class FichaRegla(Base):
-    id: str
-    antecedente: str = Field(min_length=1)
-    consecuente: str = Field(min_length=1)
-    accion: str = Field(min_length=1)
-    fundamento_markdown: str = Field(min_length=1)
-    fundamento: Fundamento
-    fuentes: list[str] = Field(default_factory=list)
-
-
 class CasoAfectado(Base):
     id: str = Field(
         description="Identificador del caso dentro de la simulación. Los casos de "
@@ -650,8 +598,6 @@ class CasoAfectado(Base):
     rama_despues: str
     reglas_nuevas: list[str]
     reglas_retiradas: list[str]
-    indice_antes: float | None = None
-    indice_despues: float | None = None
 
 
 class Impacto(Base):
@@ -660,10 +606,6 @@ class Impacto(Base):
     transiciones: dict[str, int]
     casos: list[CasoAfectado]
     nuevas_autorizaciones: int
-    variacion_maxima_indice: float | None = Field(
-        default=None,
-        description="Distancia de Tchebychev entre los índices de severidad de ambas versiones: la mayor variación en un caso.",
-    )
 
 
 class PropuestaEntrada(Base):
@@ -674,10 +616,8 @@ class PropuestaEntrada(Base):
     reglas: dict[str, dict[str, Any] | None] = Field(
         default_factory=dict, description="Id de regla de producción → nueva definición completa; null la retira."
     )
-    fichas: dict[str, FichaRegla] = Field(
-        default_factory=dict, description="Código documental → ficha completa de una regla añadida o editada."
-    )
     guardar: bool = Field(default=False, description="false: solo simular; true: registrar como PROPUESTA si es válida.")
+    difuso: dict[str, Any] | None = Field(default=None, description='Modelo Mamdani completo propuesto; exige nueva versión de base.')
 
 
 class PropuestaResultado(Base):
@@ -704,8 +644,8 @@ class DetalleVersion(Base):
     version: VersionConocimientoResumen
     parametros: list[Parametro]
     reglas: list[dict[str, Any]] = Field(description="Reglas de producción tal como las ejecuta el motor.")
-    fichas: list[FichaRegla] = Field(description="Fichas documentales completas de la versión.")
     cambios_respecto_origen: list[CambioParametro]
+    difuso: dict[str, Any] | None = None
 
 
 class ValidarReglaEntrada(Base):
@@ -743,3 +683,47 @@ class Evento(Base):
     fecha: AwareDatetime
     evidencia: str
     id_responsable: uuid.UUID
+
+
+class InspeccionAlmacenEntrada(Base):
+    revision_almacen: int = Field(ge=1)
+    fecha: AwareDatetime
+    vigente_hasta: AwareDatetime
+    evidencia: str = Field(min_length=1)
+    observaciones: list[ObservacionEntrada]
+
+
+class InspeccionAlmacen(Base):
+    id: uuid.UUID
+    id_almacen: uuid.UUID
+    id_responsable: uuid.UUID
+    revision_almacen: int
+    fecha: AwareDatetime
+    vigente_hasta: AwareDatetime
+    evidencia: str
+    observaciones: list[ObservacionEntrada]
+    creada_en: AwareDatetime
+
+
+class TecnicoAsignable(Base):
+    id: uuid.UUID
+    nombre: str
+
+
+class RecursoAsignable(Base):
+    id: uuid.UUID
+    nombre: str
+    tipo: Literal['ALMACEN', 'LOTE']
+
+
+class AsignacionTecnica(Base):
+    id_tecnico: uuid.UUID
+    id_recurso: uuid.UUID
+    tipo: Literal['ALMACEN', 'LOTE']
+    vigente: StrictBool
+
+
+class Administracion(Base):
+    tecnicos: list[TecnicoAsignable]
+    recursos: list[RecursoAsignable]
+    asignaciones: list[AsignacionTecnica]

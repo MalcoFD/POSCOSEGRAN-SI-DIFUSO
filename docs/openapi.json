@@ -1052,6 +1052,65 @@
         }
       }
     },
+    "/api/v1/unidades/{id_unidad}/captura-anterior": {
+      "get": {
+        "tags": [
+          "evaluacion"
+        ],
+        "summary": "Captura Anterior",
+        "operationId": "captura_anterior_api_v1_unidades__id_unidad__captura_anterior_get",
+        "parameters": [
+          {
+            "name": "id_unidad",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id Unidad"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapturaAnterior"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/unidades/{id_unidad}/borrador": {
       "get": {
         "tags": [
@@ -3330,6 +3389,274 @@
         }
       }
     },
+    "/api/v1/almacenes/{id_almacen}/inspeccion": {
+      "get": {
+        "tags": [
+          "inspecciones de almacén"
+        ],
+        "summary": "Consultar",
+        "operationId": "consultar_api_v1_almacenes__id_almacen__inspeccion_get",
+        "parameters": [
+          {
+            "name": "id_almacen",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id Almacen"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspeccionAlmacen"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/almacenes/{id_almacen}/inspecciones": {
+      "post": {
+        "tags": [
+          "inspecciones de almacén"
+        ],
+        "summary": "Registrar",
+        "operationId": "registrar_api_v1_almacenes__id_almacen__inspecciones_post",
+        "parameters": [
+          {
+            "name": "id_almacen",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Id Almacen"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspeccionAlmacenEntrada"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspeccionAlmacen"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/administracion/asignaciones": {
+      "get": {
+        "tags": [
+          "administración"
+        ],
+        "summary": "Consultar",
+        "operationId": "consultar_api_v1_administracion_asignaciones_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Administracion"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "administración"
+        ],
+        "summary": "Asignar",
+        "operationId": "asignar_api_v1_administracion_asignaciones_post",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsignacionTecnica"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsignacionTecnica"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/salud": {
       "get": {
         "tags": [
@@ -3424,74 +3751,6 @@
         ],
         "title": "Accion"
       },
-      "ActivacionDifusa": {
-        "properties": {
-          "orden": {
-            "type": "integer",
-            "title": "Orden"
-          },
-          "produccion": {
-            "type": "string",
-            "title": "Produccion"
-          },
-          "regla": {
-            "type": "string",
-            "title": "Regla"
-          },
-          "etapa": {
-            "type": "string",
-            "title": "Etapa"
-          },
-          "pasada": {
-            "type": "integer",
-            "title": "Pasada"
-          },
-          "grado_inf": {
-            "type": "number",
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Grado Inf"
-          },
-          "grado_sup": {
-            "type": "number",
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Grado Sup"
-          },
-          "hallazgo": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Hallazgo"
-          },
-          "terminos_salida": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Terminos Salida"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "orden",
-          "produccion",
-          "regla",
-          "etapa",
-          "pasada",
-          "grado_inf",
-          "grado_sup",
-          "hallazgo",
-          "terminos_salida"
-        ],
-        "title": "ActivacionDifusa"
-      },
       "ActivacionEntrada": {
         "properties": {
           "motivo": {
@@ -3507,6 +3766,39 @@
           "motivo"
         ],
         "title": "ActivacionEntrada"
+      },
+      "Administracion": {
+        "properties": {
+          "tecnicos": {
+            "items": {
+              "$ref": "#/components/schemas/TecnicoAsignable"
+            },
+            "type": "array",
+            "title": "Tecnicos"
+          },
+          "recursos": {
+            "items": {
+              "$ref": "#/components/schemas/RecursoAsignable"
+            },
+            "type": "array",
+            "title": "Recursos"
+          },
+          "asignaciones": {
+            "items": {
+              "$ref": "#/components/schemas/AsignacionTecnica"
+            },
+            "type": "array",
+            "title": "Asignaciones"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tecnicos",
+          "recursos",
+          "asignaciones"
+        ],
+        "title": "Administracion"
       },
       "Admision": {
         "properties": {
@@ -3703,26 +3995,40 @@
         ],
         "title": "AlmacenEntrada"
       },
-      "AlturaSalida": {
+      "AsignacionTecnica": {
         "properties": {
-          "termino": {
+          "id_tecnico": {
             "type": "string",
-            "title": "Termino"
+            "format": "uuid",
+            "title": "Id Tecnico"
           },
-          "altura": {
-            "type": "number",
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Altura"
+          "id_recurso": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id Recurso"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "ALMACEN",
+              "LOTE"
+            ],
+            "title": "Tipo"
+          },
+          "vigente": {
+            "type": "boolean",
+            "title": "Vigente"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "termino",
-          "altura"
+          "id_tecnico",
+          "id_recurso",
+          "tipo",
+          "vigente"
         ],
-        "title": "AlturaSalida"
+        "title": "AsignacionTecnica"
       },
       "Borrador": {
         "properties": {
@@ -3886,6 +4192,31 @@
         ],
         "title": "CambioRegla"
       },
+      "CapturaAnterior": {
+        "properties": {
+          "id_evaluacion": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id Evaluacion"
+          },
+          "fecha_evaluacion": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Fecha Evaluacion"
+          },
+          "contenido": {
+            "$ref": "#/components/schemas/EvaluacionEntrada-Output"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id_evaluacion",
+          "fecha_evaluacion",
+          "contenido"
+        ],
+        "title": "CapturaAnterior"
+      },
       "CasoAfectado": {
         "properties": {
           "id": {
@@ -3926,28 +4257,6 @@
             },
             "type": "array",
             "title": "Reglas Retiradas"
-          },
-          "indice_antes": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Indice Antes"
-          },
-          "indice_despues": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Indice Despues"
           }
         },
         "additionalProperties": false,
@@ -4012,6 +4321,17 @@
               }
             ],
             "title": "Hash Base"
+          },
+          "modelo_difuso": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modelo Difuso"
           },
           "parametros": {
             "items": {
@@ -4238,7 +4558,11 @@
               3,
               4,
               5,
-              6
+              6,
+              7,
+              8,
+              9,
+              10
             ],
             "title": "Paso"
           }
@@ -4288,20 +4612,23 @@
             "title": "Reglas",
             "description": "Reglas de producción tal como las ejecuta el motor."
           },
-          "fichas": {
-            "items": {
-              "$ref": "#/components/schemas/FichaRegla"
-            },
-            "type": "array",
-            "title": "Fichas",
-            "description": "Fichas documentales completas de la versión."
-          },
           "cambios_respecto_origen": {
             "items": {
               "$ref": "#/components/schemas/CambioParametro"
             },
             "type": "array",
             "title": "Cambios Respecto Origen"
+          },
+          "difuso": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difuso"
           }
         },
         "additionalProperties": false,
@@ -4310,7 +4637,6 @@
           "version",
           "parametros",
           "reglas",
-          "fichas",
           "cambios_respecto_origen"
         ],
         "title": "DetalleVersion"
@@ -4546,6 +4872,7 @@
           "rama_r30": {
             "type": "string",
             "enum": [
+              "MAMDANI_FINAL",
               "R30.1",
               "R30.2",
               "R30.3",
@@ -4639,16 +4966,17 @@
             "type": "string",
             "title": "Version Motor"
           },
-          "inferencia": {
+          "difuso": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/InferenciaDifusa"
+                "type": "object"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Sistema de inferencia difusa (Mamdani); null en evaluaciones nítidas."
+            "title": "Difuso",
+            "description": "Traza Mamdani inmutable; los índices no son probabilidades."
           }
         },
         "additionalProperties": false,
@@ -4997,8 +5325,7 @@
                   "EQ",
                   "NEQ",
                   "PRESENCIA",
-                  "VIGENCIA",
-                  "PERTENENCIA"
+                  "VIGENCIA"
                 ]
               },
               {
@@ -5026,32 +5353,6 @@
               }
             ],
             "title": "Umbral"
-          },
-          "termino": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Termino",
-            "description": "Término lingüístico evaluado (operador PERTENENCIA)."
-          },
-          "grado": {
-            "anyOf": [
-              {
-                "type": "number",
-                "maximum": 1.0,
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Grado",
-            "description": "Grado de pertenencia μ del valor observado al término."
           }
         },
         "additionalProperties": false,
@@ -5152,27 +5453,16 @@
             "type": "string",
             "title": "Hash Base"
           },
-          "origen_decision": {
-            "type": "string",
-            "enum": [
-              "NITIDO",
-              "VETO",
-              "CORTE_ALFA",
-              "INDICE",
-              "PENDIENTES"
-            ],
-            "title": "Origen Decision",
-            "default": "NITIDO"
-          },
-          "inferencia": {
+          "difuso": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/InferenciaDifusa"
+                "type": "object"
               },
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "Difuso"
           }
         },
         "additionalProperties": false,
@@ -5195,62 +5485,6 @@
           "hash_base"
         ],
         "title": "Explicacion"
-      },
-      "FichaRegla": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "antecedente": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Antecedente"
-          },
-          "consecuente": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Consecuente"
-          },
-          "accion": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Accion"
-          },
-          "fundamento_markdown": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Fundamento Markdown"
-          },
-          "fundamento": {
-            "type": "string",
-            "enum": [
-              "PUBLICADO",
-              "TRANSFERIDO",
-              "POLITICA_PROTOTIPO",
-              "MIXTO"
-            ],
-            "title": "Fundamento"
-          },
-          "fuentes": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Fuentes"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "id",
-          "antecedente",
-          "consecuente",
-          "accion",
-          "fundamento_markdown",
-          "fundamento"
-        ],
-        "title": "FichaRegla"
       },
       "Fuente": {
         "properties": {
@@ -5428,18 +5662,6 @@
           "nuevas_autorizaciones": {
             "type": "integer",
             "title": "Nuevas Autorizaciones"
-          },
-          "variacion_maxima_indice": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Variacion Maxima Indice",
-            "description": "Distancia de Tchebychev entre los índices de severidad de ambas versiones: la mayor variación en un caso."
           }
         },
         "additionalProperties": false,
@@ -5526,60 +5748,6 @@
         ],
         "title": "Incidencia"
       },
-      "InferenciaDifusa": {
-        "properties": {
-          "pertenencias": {
-            "items": {
-              "$ref": "#/components/schemas/PertenenciaDifusa"
-            },
-            "type": "array",
-            "title": "Pertenencias"
-          },
-          "activaciones": {
-            "items": {
-              "$ref": "#/components/schemas/ActivacionDifusa"
-            },
-            "type": "array",
-            "title": "Activaciones"
-          },
-          "salida": {
-            "$ref": "#/components/schemas/SalidaDifusa"
-          },
-          "origen_decision": {
-            "type": "string",
-            "enum": [
-              "NITIDO",
-              "VETO",
-              "CORTE_ALFA",
-              "INDICE",
-              "PENDIENTES"
-            ],
-            "title": "Origen Decision"
-          },
-          "borrosidad": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Borrosidad",
-            "description": "Borrosidad normalizada de la fuzzificación: 0 = nítida, 1 = máxima."
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "pertenencias",
-          "activaciones",
-          "salida",
-          "origen_decision",
-          "borrosidad"
-        ],
-        "title": "InferenciaDifusa"
-      },
       "Inicio": {
         "properties": {
           "unidades_total": {
@@ -5611,6 +5779,110 @@
           "controles_proximos"
         ],
         "title": "Inicio"
+      },
+      "InspeccionAlmacen": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "id_almacen": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id Almacen"
+          },
+          "id_responsable": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id Responsable"
+          },
+          "revision_almacen": {
+            "type": "integer",
+            "title": "Revision Almacen"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Fecha"
+          },
+          "vigente_hasta": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Vigente Hasta"
+          },
+          "evidencia": {
+            "type": "string",
+            "title": "Evidencia"
+          },
+          "observaciones": {
+            "items": {
+              "$ref": "#/components/schemas/ObservacionEntrada"
+            },
+            "type": "array",
+            "title": "Observaciones"
+          },
+          "creada_en": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Creada En"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "id_almacen",
+          "id_responsable",
+          "revision_almacen",
+          "fecha",
+          "vigente_hasta",
+          "evidencia",
+          "observaciones",
+          "creada_en"
+        ],
+        "title": "InspeccionAlmacen"
+      },
+      "InspeccionAlmacenEntrada": {
+        "properties": {
+          "revision_almacen": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Revision Almacen"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Fecha"
+          },
+          "vigente_hasta": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Vigente Hasta"
+          },
+          "evidencia": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Evidencia"
+          },
+          "observaciones": {
+            "items": {
+              "$ref": "#/components/schemas/ObservacionEntrada"
+            },
+            "type": "array",
+            "title": "Observaciones"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "revision_almacen",
+          "fecha",
+          "vigente_hasta",
+          "evidencia",
+          "observaciones"
+        ],
+        "title": "InspeccionAlmacenEntrada"
       },
       "IntervaloEntrada": {
         "properties": {
@@ -5797,14 +6069,6 @@
               "MIXTO"
             ],
             "title": "Fundamento"
-          },
-          "grado_activacion": {
-            "type": "number",
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Grado Activacion",
-            "description": "Grado α con que se activó la regla (Modus Ponens Generalizado).",
-            "default": 1.0
           }
         },
         "additionalProperties": false,
@@ -6432,13 +6696,6 @@
               }
             ],
             "title": "Antecedente"
-          },
-          "grado": {
-            "type": "number",
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Grado",
-            "default": 1.0
           }
         },
         "additionalProperties": false,
@@ -6488,49 +6745,6 @@
           "roles"
         ],
         "title": "Perfil"
-      },
-      "PertenenciaDifusa": {
-        "properties": {
-          "variable": {
-            "type": "string",
-            "title": "Variable"
-          },
-          "termino": {
-            "type": "string",
-            "title": "Termino"
-          },
-          "valor": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Valor"
-          },
-          "unidad": {
-            "type": "string",
-            "title": "Unidad"
-          },
-          "grado": {
-            "type": "number",
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Grado"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "variable",
-          "termino",
-          "valor",
-          "unidad",
-          "grado"
-        ],
-        "title": "PertenenciaDifusa"
       },
       "Plan": {
         "properties": {
@@ -6693,19 +6907,23 @@
             "title": "Reglas",
             "description": "Id de regla de producción → nueva definición completa; null la retira."
           },
-          "fichas": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/FichaRegla"
-            },
-            "type": "object",
-            "title": "Fichas",
-            "description": "Código documental → ficha completa de una regla añadida o editada."
-          },
           "guardar": {
             "type": "boolean",
             "title": "Guardar",
             "description": "false: solo simular; true: registrar como PROPUESTA si es válida.",
             "default": false
+          },
+          "difuso": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difuso",
+            "description": "Modelo Mamdani completo propuesto; exige nueva versión de base."
           }
         },
         "additionalProperties": false,
@@ -6822,22 +7040,6 @@
             },
             "type": "array",
             "title": "Faltan"
-          },
-          "grado": {
-            "type": "number",
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Grado",
-            "description": "Grado cierto de la condición de la rama.",
-            "default": 1.0
-          },
-          "corte": {
-            "type": "number",
-            "maximum": 1.0,
-            "minimum": 0.0,
-            "title": "Corte",
-            "description": "Corte-α que debe alcanzar la rama.",
-            "default": 1.0
           }
         },
         "additionalProperties": false,
@@ -6850,6 +7052,35 @@
           "faltan"
         ],
         "title": "RamaExplicada"
+      },
+      "RecursoAsignable": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "nombre": {
+            "type": "string",
+            "title": "Nombre"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "ALMACEN",
+              "LOTE"
+            ],
+            "title": "Tipo"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "nombre",
+          "tipo"
+        ],
+        "title": "RecursoAsignable"
       },
       "Regla": {
         "properties": {
@@ -7075,71 +7306,25 @@
         ],
         "title": "RevisionEntrada"
       },
-      "SalidaDifusa": {
+      "TecnicoAsignable": {
         "properties": {
-          "variable": {
+          "id": {
             "type": "string",
-            "title": "Variable"
+            "format": "uuid",
+            "title": "Id"
           },
-          "metodo": {
+          "nombre": {
             "type": "string",
-            "const": "CENTROIDE",
-            "title": "Metodo"
-          },
-          "alturas": {
-            "items": {
-              "$ref": "#/components/schemas/AlturaSalida"
-            },
-            "type": "array",
-            "title": "Alturas",
-            "description": "Altura de recorte de cada consecuente (implicación de Mamdani)."
-          },
-          "indice": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Indice",
-            "description": "Centroide del conjunto agregado; null si el conjunto agregado es vacío."
-          },
-          "banda": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Banda"
-          },
-          "decision_indice": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Decision Indice"
+            "title": "Nombre"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "variable",
-          "metodo",
-          "alturas",
-          "indice",
-          "banda",
-          "decision_indice"
+          "id",
+          "nombre"
         ],
-        "title": "SalidaDifusa"
+        "title": "TecnicoAsignable"
       },
       "Unidad": {
         "properties": {

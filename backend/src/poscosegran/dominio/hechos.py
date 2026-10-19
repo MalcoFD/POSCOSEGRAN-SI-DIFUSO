@@ -174,7 +174,6 @@ class Motivo:
     evidencias: tuple[Evidencia, ...] = ()
     fuentes: tuple[tuple[str, str | None], ...] = ()
     fundamento: str = "POLITICA_PROTOTIPO"
-    grado: float = 1.0
 
 
 @dataclass(frozen=True, slots=True)
