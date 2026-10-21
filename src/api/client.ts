@@ -14,7 +14,7 @@ export const supabase = !localAuth && supabaseUrl && supabaseKey
 export const baseUrl = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/$/, '')
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string, public requestId?: string) { super(message) }
+  constructor(public status: number, message: string, public requestId?: string, public campos: { ruta: string; mensaje: string }[] = []) { super(message) }
 }
 
 export async function accessToken(): Promise<string | null> {
@@ -38,7 +38,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   const data = await response.json().catch(() => null)
   if (!response.ok) {
     const detail = data?.campos?.map((f: {ruta: string; mensaje: string}) => `${f.ruta}: ${f.mensaje}`).join('; ')
-    throw new ApiError(response.status, `${data?.mensaje || data?.detail || 'No se pudo completar la operación'}${detail ? ': ' + detail : ''}`, data?.id_solicitud)
+    throw new ApiError(response.status, `${data?.mensaje || data?.detail || 'No se pudo completar la operación'}${detail ? ': ' + detail : ''}`, data?.id_solicitud, data?.campos ?? [])
   }
   return data as T
 }

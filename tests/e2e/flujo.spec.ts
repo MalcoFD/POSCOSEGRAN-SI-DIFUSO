@@ -93,6 +93,26 @@ test('captura completa, continuidad entre pasos y revisión con edición directa
   await expect(page.getByLabel('Filtraciones de agua en el almacén',{exact:true})).toHaveValue('true')
 })
 
+test('validación señala el paso y el campo incompleto', async ({ page }) => {
+  await login(page)
+  await page.getByRole('row').filter({hasText:'Costal E2E'}).first().getByRole('button',{name:'Evaluar',exact:true}).click()
+  await page.getByRole('button',{name:/P2.*Mediciones/}).click()
+  await page.getByLabel('Humedad del grano · % b.h.', {exact:true}).fill('13,1')
+  await page.getByLabel('Método · Humedad del grano', {exact:true}).fill('')
+  await page.getByRole('button',{name:/P1/}).click()
+  await page.getByRole('button',{name:'Enviar y evaluar',exact:true}).click()
+  const resumen = page.getByRole('alert').filter({hasText:'antes de guardar o enviar'})
+  await expect(resumen).toContainText('P2 · Mediciones y plazo')
+  await expect(resumen).toContainText('Humedad del grano')
+  await expect(page.getByRole('button',{name:/P2.*Mediciones/})).toHaveClass(/has-error/)
+  await expect(page.getByRole('button',{name:/P2.*Mediciones/})).toHaveAttribute('aria-current','step')
+  await expect(page.locator('#campo-humedad_grano')).toHaveClass(/invalid/)
+  await expect(page.getByLabel('Método · Humedad del grano', {exact:true})).toHaveAttribute('aria-invalid','true')
+  await page.getByLabel('Método · Humedad del grano', {exact:true}).fill('Medidor calibrado')
+  await expect(page.locator('#campo-humedad_grano')).not.toHaveClass(/invalid/)
+  await expect(resumen).toHaveCount(0)
+})
+
 test('sesión y navegación responsive a 360, 768 y 1440 px', async ({ page }) => {
   await login(page)
   for (const width of [360, 768, 1440]) {

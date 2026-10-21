@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { createContext, useContext, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import campos from '../campos.json'
 import { nombre, request, type Observacion, type Schema } from '../api/client'
@@ -9,6 +9,25 @@ export type CapturaDatos = Record<string, CapturaValor>
 export const fechaLocal = (value: string) => { const d = new Date(value); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16) }
 export const ahoraLocal = () => fechaLocal(new Date().toISOString())
 export const vacio = (): CapturaValor => ({ valor: '', captura: 'DESCONOCIDO', fecha: ahoraLocal(), metodo: '', evidencia: '', causa: '' })
+
+/** Qué parte de una observación falta: el valor, el método o la fecha. */
+export type ErrorCampo = { tipo: 'valor' | 'metodo' | 'fecha'; mensaje: string }
+/** Errores de la captura en curso; cada campo los lee para resaltarse sin pasar props por toda la jerarquía. */
+export const ErroresCaptura = createContext<{ errores: Record<string, ErrorCampo>; limpiar: (campo: string) => void }>({ errores: {}, limpiar: () => {} })
+
+/** Valida todas las observaciones aportadas y devuelve cada problema, no solo el primero. */
+export function validarCaptura(datos: CapturaDatos): Record<string, ErrorCampo> {
+  const errores: Record<string, ErrorCampo> = {}
+  for (const [campo, value] of Object.entries(datos)) {
+    if (value.captura !== 'APORTADO') continue
+    const def = campos[campo as keyof typeof campos]
+    if (!value.valor.trim()) errores[campo] = { tipo: 'valor', mensaje: 'Completa este dato o marca «No se sabe».' }
+    else if (def?.tipo === 'N' && !Number.isFinite(Number(value.valor.replace(',', '.')))) errores[campo] = { tipo: 'valor', mensaje: 'Escribe un número válido (coma o punto decimal).' }
+    else if (!value.metodo.trim()) errores[campo] = { tipo: 'metodo', mensaje: 'Indica el método o equipo con que se obtuvo.' }
+    else if (!value.fecha) errores[campo] = { tipo: 'fecha', mensaje: 'Indica la fecha de la observación.' }
+  }
+  return errores
+}
 const labels: Record<string, string> = {
   filtracion_agua_almacen: 'Filtraciones de agua en el almacén', drenaje_obstruido: 'Drenaje obstruido', malla_ventana_danada: 'Malla de ventana dañada', abertura_ingreso_plagas: 'Aberturas para ingreso de plagas', humedad_por_agua_en_unidad: 'Unidad mojada por exposición a agua', agua_estancada_entorno: 'Agua estancada en el entorno', residuos_o_maleza_entorno: 'Residuos o maleza en el entorno', sacos_usados_o_desechos_en_almacen: 'Sacos usados o desechos en el almacén', residuos_de_proceso_sin_retirar: 'Residuos de proceso sin retirar',
   paleta_danada_o_con_salientes: 'Paleta dañada o con salientes', estiba_inestable: 'Estiba inestable', altura_supera_limite_proveedor: 'Altura superior al límite del proveedor', pasillo_inspeccion_obstruido: 'Pasillo de inspección obstruido', distancia_entre_estantes: 'Separación entre estantes',
@@ -39,11 +58,12 @@ const labels: Record<string, string> = {
 export const etiqueta = (campo: string) => labels[campo] || nombre(campo)
 export const unidadLegible = (unidad: string) => ({ PCT_BH: '% b.h.', PCT_HR: '% HR', PCT_MASA: '% masa', CELSIUS: '°C', METROS: 'm', DIAS: 'días', FRACCION: 'fracción' } as Record<string,string>)[unidad] ?? unidad
 
-function MetadatosObservacion({ label, value, change }: { label: string; value: CapturaValor; change: (patch: Partial<CapturaValor>) => void }) {
+function MetadatosObservacion({ label, value, change, error }: { label: string; value: CapturaValor; change: (patch: Partial<CapturaValor>) => void; error?: ErrorCampo }) {
   const [open, setOpen] = useState(!value.metodo)
-  return <details open={open} onToggle={e => setOpen(e.currentTarget.open)}><summary>Fecha, método y evidencia</summary><div className="stack compact">
-    <Field label={`Fecha de observación · ${label}`}><input type="datetime-local" value={value.fecha} onChange={e => change({ fecha: e.target.value })}/></Field>
-    <Field label={`Método · ${label}`}><input value={value.metodo} placeholder="Procedimiento o equipo utilizado" onChange={e => change({ metodo: e.target.value })}/></Field>
+  const falta = error && error.tipo !== 'valor'
+  return <details open={open || !!falta} onToggle={e => setOpen(e.currentTarget.open)}><summary>Fecha, método y evidencia</summary><div className="stack compact">
+    <Field label={`Fecha de observación · ${label}`} error={error?.tipo === 'fecha' ? error.mensaje : undefined}><input type="datetime-local" value={value.fecha} onChange={e => change({ fecha: e.target.value })}/></Field>
+    <Field label={`Método · ${label}`} error={error?.tipo === 'metodo' ? error.mensaje : undefined}><input value={value.metodo} placeholder="Procedimiento o equipo utilizado" onChange={e => change({ metodo: e.target.value })}/></Field>
     <Field label={`Evidencia · ${label}`}><input value={value.evidencia} onChange={e => change({ evidencia: e.target.value })}/></Field>
   </div></details>
 }
@@ -57,6 +77,8 @@ function PorQueSePide({ campo, uso }: { campo: string; uso?: Record<string, stri
   </details>
 }
 export function convertir(datos: CapturaDatos): Observacion[] {
+  const [primero] = Object.entries(validarCaptura(datos))
+  if (primero) throw new Error(`${etiqueta(primero[0])}: ${primero[1].mensaje}`)
   return Object.entries(datos).map(([campo, value]) => {
     const def = campos[campo as keyof typeof campos]
     let valor: string | number | boolean | null = null
@@ -79,13 +101,15 @@ export function desdeObservaciones(observaciones: Observacion[]): CapturaDatos {
 export default function Captura({ datos, onChange, paso, filtro, historicos = {} }: { datos: CapturaDatos; onChange: (d: CapturaDatos) => void; paso?: number; filtro?: string[]; historicos?: CapturaDatos }) {
   const catalogo = useQuery({ queryKey: ['conocimiento'], queryFn: () => request<Schema['Catalogo']>('/conocimiento'), staleTime: 300000 })
   const uso = catalogo.data?.uso_campos
+  const { errores, limpiar } = useContext(ErroresCaptura)
   return <div className="capture-grid">{Object.entries(campos).filter(([key, def]) => key !== 'clima_calido' && (!paso || def.paso === paso) && (!filtro || filtro.includes(key))).map(([campo, def]) => {
     const value = datos[campo] || historicos[campo] || vacio(), label = etiqueta(campo)
     const historico = !datos[campo] && !!historicos[campo]
-    const change = (patch: Partial<CapturaValor>) => onChange({ ...datos, [campo]: { ...value, ...patch } })
-    return <div className={`capture-field${historico ? ' historical' : ''}`} key={campo}>
+    const error = errores[campo]
+    const change = (patch: Partial<CapturaValor>) => { if (error) limpiar(campo); onChange({ ...datos, [campo]: { ...value, ...patch } }) }
+    return <div className={`capture-field${historico ? ' historical' : ''}${error ? ' invalid' : ''}`} key={campo} id={`campo-${campo}`}>
       {historico && <small className="historical-note">Dato anterior · {value.fecha.replace('T',' ')}. Solo se registra una nueva observación si lo modificas; conserva o corrige su fecha real.</small>}
-      <Field label={`${label}${def.tipo === 'N' ? ' · ' + unidadLegible(def.unidad) : ''}`}>
+      <Field label={`${label}${def.tipo === 'N' ? ' · ' + unidadLegible(def.unidad) : ''}`} error={error?.tipo === 'valor' ? error.mensaje : undefined}>
         {def.tipo === 'B' ? <select value={value.captura === 'APORTADO' ? value.valor : value.captura} onChange={e => change(e.target.value === 'true' || e.target.value === 'false' ? { valor: e.target.value, captura: 'APORTADO' } : { valor: '', captura: e.target.value as CapturaValor['captura'] })}><option value="DESCONOCIDO">No se sabe</option><option value="true">Sí</option><option value="false">No</option>{def.admite_no_aplica && <option value="NO_APLICA">No aplica (justificar)</option>}</select>
           : campo === 'metodo_humedad' ? <select value={value.valor} onChange={e => change({ valor: e.target.value, captura: e.target.value ? 'APORTADO' : 'DESCONOCIDO' })}><option value="">No se sabe</option><option value="INSTRUMENTAL">Instrumental</option><option value="LABORATORIO">Laboratorio</option><option value="ESTIMACION_INDIRECTA">Estimación indirecta</option></select>
           : <input type={def.tipo === 'F' ? 'datetime-local' : 'text'} inputMode={def.tipo === 'N' ? 'decimal' : undefined} value={value.valor} placeholder="Sin dato" onChange={e => change({ valor: e.target.value, captura: e.target.value ? 'APORTADO' : 'DESCONOCIDO' })} />}
@@ -93,7 +117,7 @@ export default function Captura({ datos, onChange, paso, filtro, historicos = {}
       {def.tipo !== 'B' && def.admite_no_aplica && <label className="check"><input type="checkbox" checked={value.captura === 'NO_APLICA'} onChange={e => change({ captura: e.target.checked ? 'NO_APLICA' : 'DESCONOCIDO', valor: '' })} />No aplica</label>}
       <PorQueSePide campo={campo} uso={uso} />
       {value.captura === 'NO_APLICA' && <Field label={`Motivo de no aplicación · ${label}`}><input value={value.causa} onChange={e => change({ causa: e.target.value })} /></Field>}
-      {value.captura === 'APORTADO' && <MetadatosObservacion label={label} value={value} change={change}/>}
+      {value.captura === 'APORTADO' && <MetadatosObservacion label={label} value={value} change={change} error={error}/>}
     </div>
   })}</div>
 }
