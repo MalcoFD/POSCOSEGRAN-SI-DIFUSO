@@ -1,0 +1,10 @@
+# Copie a terraform.tfvars (ignorado por git) y complete.
+alerta_email = "su_correo@ejemplo.com"
+github_token = "github_pat_REEMPLAZAR"
+
+# Opcionales:
+# region          = "us-east-1"
+# perfil_aws      = "poscosegran"
+# rama            = "main"
+# presupuesto_usd = 5
+# api_tareas      = 1   # 0 apaga la API (Fargate) sin destruir nada

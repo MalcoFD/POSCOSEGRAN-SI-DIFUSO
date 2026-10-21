@@ -1,0 +1,21 @@
+# Build del frontend en AWS Amplify Hosting (infra/terraform/amplify.tf).
+# VITE_AUTH_MODE y VITE_API_URL llegan como variables de entorno de la app.
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - nvm install 22 && nvm use 22
+        - corepack enable
+        - corepack prepare pnpm@10.24.0 --activate
+        - pnpm install --frozen-lockfile
+    build:
+      commands:
+        - pnpm build
+  artifacts:
+    baseDirectory: dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*

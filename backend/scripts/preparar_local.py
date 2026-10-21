@@ -40,15 +40,23 @@ if not argumentos.contenedor and not archivo.exists():
         "POSCOSEGRAN_LIMITE_PETICIONES_ESCRITURA_POR_MINUTO=300\n", encoding="utf-8")
 if archivo.exists():
     load_dotenv(archivo)
-if os.environ.get("POSCOSEGRAN_ENTORNO") != "local":
-    raise SystemExit("Este script solo prepara el entorno local")
+# "pruebas" cubre la demo temporal en AWS (infra/terraform), que reutiliza este script.
+if os.environ.get("POSCOSEGRAN_ENTORNO") not in {"local", "pruebas"}:
+    raise SystemExit("Este script solo prepara el entorno local o de pruebas")
 admin = create_engine(os.environ.get("POSCOSEGRAN_BD_URL_ADMIN_LOCAL",
     "postgresql+psycopg://postgres:revision_local_2026@127.0.0.1:55432/poscosegran"))
 with admin.begin() as conn:
-    for rol, password in (("poscosegran_app", "local_app_2026"),
-                          ("poscosegran_migraciones", "local_migraciones_2026")):
+    for rol, password in (
+        ("poscosegran_app", os.environ.get("POSCOSEGRAN_BD_PASSWORD_APP", "local_app_2026")),
+        ("poscosegran_migraciones",
+         os.environ.get("POSCOSEGRAN_BD_PASSWORD_MIGRACIONES", "local_migraciones_2026")),
+    ):
         if not conn.scalar(text("SELECT 1 FROM pg_roles WHERE rolname=:rol"), {"rol": rol}):
             conn.exec_driver_sql(f"CREATE ROLE {rol} LOGIN PASSWORD '{password}'")
+    # En RDS el usuario maestro no es superusuario: necesita ser miembro del rol de
+    # migraciones para crear el esquema a su nombre y conceder permisos sobre sus tablas.
+    if not conn.scalar(text("SELECT rolsuper FROM pg_roles WHERE rolname = current_user")):
+        conn.exec_driver_sql("GRANT poscosegran_migraciones TO CURRENT_USER")
     conn.exec_driver_sql("CREATE SCHEMA IF NOT EXISTS poscosegran AUTHORIZATION poscosegran_migraciones")
     conn.exec_driver_sql("GRANT CONNECT ON DATABASE poscosegran TO poscosegran_app, poscosegran_migraciones")
     conn.exec_driver_sql("GRANT USAGE ON SCHEMA poscosegran TO poscosegran_app")

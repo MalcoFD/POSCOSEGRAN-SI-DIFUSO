@@ -43,6 +43,26 @@ backend/.venv/Scripts/python.exe backend/scripts/preparar_local.py
 
 Después ejecuta FastAPI en el puerto 8000 y Vite en el 8443 con los comandos del README. Este modo requiere Python 3.13, Node 22 y pnpm en el host, y ofrece recarga automática.
 
+## Despliegue temporal en AWS
+
+Pensado para una demo de pocos días: ECS Fargate (API), RDS PostgreSQL 16 (`db.t4g.micro`, free tier), API Gateway HTTP API (HTTPS, sin ALB) y Amplify Hosting (frontend desde GitHub). No usa NAT Gateway, ALB, CloudFront ni EC2. La infraestructura está en [`infra/terraform`](../infra/terraform).
+
+```
+Amplify (HTTPS) ──> API Gateway HTTP API ──VPC Link + Cloud Map──> Fargate [inicializar → api] ──> RDS (privada)
+```
+
+Requisitos: Terraform ≥ 1.6, AWS CLI v2 con credenciales de administrador, Docker Desktop y un PAT de GitHub con acceso al repositorio (*Contents: read*, *Webhooks: read/write*).
+
+1. Copia `infra/terraform/terraform.tfvars.example` a `terraform.tfvars` y completa `alerta_email` y `github_token`.
+2. Ejecuta `powershell -ExecutionPolicy Bypass -File scripts/desplegar_aws.ps1` (añade `-Perfil NOMBRE` si usas un perfil de AWS CLI). Aplica Terraform (~10 min por RDS), construye y publica la imagen de la API, redespliega ECS y lanza el build de Amplify.
+3. Obtén la contraseña de los usuarios de demo con el comando de la salida `comando_password_login` y entra en `frontend_url` como `productor`, `tecnico`, `administrador` o `ingeniero`.
+
+La tarea de ECS reproduce el Compose: el contenedor `inicializar` ejecuta `preparar_local.py --contenedor` con la credencial maestra de RDS (roles con contraseñas aleatorias, migraciones, usuarios y semilla Mamdani) y la API arranca solo si termina bien; la API recibe únicamente la credencial de aplicación. Los secretos se guardan en SSM Parameter Store. El entorno es `pruebas` con acceso local: una contraseña compartida, válida para una demo, no para producción.
+
+Para actualizar solo la API tras cambiar código: `scripts/desplegar_aws.ps1 -SaltarTerraform -SaltarFrontend`. El frontend se reconstruye solo con cada push a `main`. Para pausar el cómputo sin perder datos, `api_tareas = 0` en `terraform.tfvars` y `terraform apply`.
+
+Costo estimado de 3 días: ~USD 1,5–3 (Fargate y su IPv4 pública; RDS, Amplify, API Gateway y ECR dentro del free tier de 12 meses). Al terminar, **destruye todo** con `terraform -chdir=infra/terraform destroy` y revisa *Billing* al día siguiente. El estado local de Terraform contiene contraseñas: no lo compartas.
+
 ## Incorporar Supabase más adelante
 
 Esta conexión requiere crear el proyecto; no se ha probado con un servicio Supabase real.

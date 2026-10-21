@@ -33,4 +33,10 @@ backend/.env
 test-results/
 playwright-report/
 *.dump
+
+# Terraform: el estado y las variables contienen secretos
+infra/terraform/.terraform/
+*.tfstate
+*.tfstate.*
+infra/terraform/terraform.tfvars
 docs/superpowers
