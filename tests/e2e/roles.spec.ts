@@ -55,6 +55,7 @@ test('administrador asigna, técnico inspecciona, ingeniero revisa el Mamdani fi
   await expect(page.getByRole('button', { name: 'Evaluaciones', exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Adquisición', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Base de Conocimiento', exact: true }).click()
+  await page.getByRole('tab', { name: 'Vista técnica' }).click()
   await expect(page.getByRole('heading', {name:'Decisión final Mamdani · 11 antecedentes · 14 reglas'})).toBeVisible()
   const final = page.getByRole('heading', {name:'Decisión final Mamdani · 11 antecedentes · 14 reglas'}).locator('..')
   await expect(final.locator('table').first().locator('tbody tr')).toHaveCount(14)

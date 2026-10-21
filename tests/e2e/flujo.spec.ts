@@ -68,6 +68,8 @@ test('acceso → alta → borrador → cuarentena → evento → reevaluación �
   await expect(page.getByRole('heading', { name: 'Separar y solicitar evaluación técnica', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Base de Conocimiento' }).click()
   await expect(page.getByRole('heading', { name: 'Base de conocimiento', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Explora una medición' })).toBeVisible()
+  await page.getByRole('tab', { name: 'Vista técnica' }).click()
   await page.getByLabel('Buscar regla o término').fill('R19')
   await expect(page.locator('summary').filter({ hasText: 'R19' })).toBeVisible()
   expect(errors).toEqual([])
@@ -132,6 +134,7 @@ test('núcleo reducido visible, edición persistente y nueve reglas conjuntas', 
     await page.screenshot({path:`test-results/nucleo-captura-${width}.png`, fullPage:true})
   }
   await page.getByRole('button', {name:'Base de Conocimiento', exact:true}).click()
+  await page.getByRole('tab', {name:'Vista técnica'}).click()
   await expect(page.getByRole('heading', {name:'Núcleo difuso para autorizar almacenamiento'})).toBeVisible()
   const nucleo = page.locator('.panel').filter({has:page.getByRole('heading', {name:'Núcleo difuso para autorizar almacenamiento'})})
   await expect(nucleo.locator('table').first().locator('tbody tr')).toHaveCount(9)

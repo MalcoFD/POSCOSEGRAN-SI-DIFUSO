@@ -74,8 +74,45 @@ export async function list<T>(path: string): Promise<T[]> {
 }
 
 export const revisiones = (u: Unidad) => ({ revision_unidad: u.revision, revision_almacen: u.revision_almacen })
-export const fecha = (value: string | null) => value ? new Date(value).toLocaleString('es-PE', { timeZone: 'America/Lima' }) : 'Sin registro'
-export const nombre = (value: string) => value.toLowerCase().replaceAll('_', ' ').replace(/^./, c => c.toUpperCase())
+const formatoFecha = new Intl.DateTimeFormat('es-PE', { timeZone: 'America/Lima', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+export const fecha = (value: string | null) => value ? formatoFecha.format(new Date(value)) : 'Sin registro'
+const relativo = new Intl.RelativeTimeFormat('es', { numeric: 'auto' })
+/** "Mañana", "En 6 días", "Hace 2 horas"; complementa a fecha(), no la sustituye. */
+export function fechaRelativa(value: string | null, ahora = Date.now()) {
+  if (!value) return 'Sin programar'
+  const ms = new Date(value).getTime() - ahora
+  const horas = ms / 3_600_000
+  const texto = Math.abs(horas) < 24 ? relativo.format(Math.round(horas), 'hour') : relativo.format(Math.round(horas / 24), 'day')
+  return texto.charAt(0).toUpperCase() + texto.slice(1)
+}
+
+// Etiquetas legibles de los enums de la API; el valor enviado no cambia.
+export const ETIQUETAS: Record<string, string> = {
+  VIGENTE: 'Vigente', VENCIDA: 'Vencida', INVALIDADA: 'Invalidada', NO_AUTORIZADO: 'No autorizado', SIN_EVALUACION: 'Sin evaluación',
+  HERMETICO: 'Hermético', NO_HERMETICO: 'No hermético', INGRESO: 'Ingreso', SEGUIMIENTO: 'Seguimiento', CONTINUIDAD: 'Continuidad',
+  GRANO: 'Grano', EXTERIOR: 'Exterior', ALMACEN: 'Almacén', LOTE: 'Lote',
+  LIMPIEZA_GENERAL: 'Limpieza general', APERTURA: 'Apertura', RESELLADO: 'Resellado', SECADO: 'Secado', ENFRIAMIENTO: 'Enfriamiento', EXPOSICION_AGUA: 'Exposición al agua', CARGA_DESCARGA: 'Carga o descarga',
+  CUARENTENA: 'Cuarentena', REVISION_PLAGAS: 'Revisión de plagas', REVISION_TERMICA: 'Revisión térmica', CORRECCION: 'Corrección',
+  ABIERTA: 'Abierta', CERRADA: 'Cerrada', PENDIENTE: 'Pendiente', CONFIRMADA: 'Confirmada', DESCARTADA: 'Descartada',
+  INSTRUMENTAL: 'Instrumental', LABORATORIO: 'Laboratorio', ESTIMACION_INDIRECTA: 'Estimación indirecta',
+  PRODUCTOR: 'Productor', TECNICO: 'Técnico', ADMINISTRADOR: 'Administrador', INGENIERO_CONOCIMIENTO: 'Ingeniería del conocimiento',
+  PUBLICADO: 'Publicado', MIXTO: 'Mixto', POLITICA_PROTOTIPO: 'Política del prototipo', TRANSFERIDO: 'Transferido',
+  controles: 'Registrar control', eventos: 'Registrar evento', planes: 'Plan de monitoreo', dictamenes: 'Dictamen técnico',
+  revisiones: 'Revisar incidencia', resoluciones: 'Resolver incidencia', admisiones: 'Registrar admisión',
+}
+export const nombre = (value: string) => ETIQUETAS[value] ?? value.toLowerCase().replaceAll('_', ' ').replace(/^./, c => c.toUpperCase())
+
+export type Tono = 'ok' | 'warn' | 'crit' | 'info' | ''
+/** Tono semántico de un estado o decisión para los badges. */
+export function tonoEstado(valor: string | null | undefined): Tono {
+  if (!valor) return ''
+  if (valor === 'VIGENTE' || valor === 'CERRADA' || valor.startsWith('AUTORIZAR')) return 'ok'
+  if (valor === 'ABIERTA' || valor === 'CORREGIR_Y_REEVALUAR' || valor === 'PENDIENTE') return 'warn'
+  if (valor === 'SIN_EVALUACION' || valor === 'SIN_CONCLUSION_AUTOMATICA') return 'info'
+  if (['VENCIDA', 'INVALIDADA', 'NO_AUTORIZADO', 'CUARENTENA', 'BLOQUEAR_INGRESO', 'RETIRAR_LOTE', 'CONFIRMADA'].includes(valor)) return 'crit'
+  return ''
+}
+export const iniciales = (texto: string) => texto.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]!.toUpperCase()).join('') || '·'
 
 // Etiquetas oficiales de las siete decisiones (Prompt 1). El código técnico se
 // conserva en la API y en la explicación; al usuario se le muestra la etiqueta.

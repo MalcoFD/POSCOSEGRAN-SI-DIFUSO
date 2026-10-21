@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 import sqlalchemy as sa
-from fastapi import APIRouter, Query, Response, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 
 from ...db.modelos import (
     Almacen,
@@ -259,6 +259,17 @@ def listar_lotes(
     ))
 
 
+def _exigir_codigo_libre(
+    sesion: SesionDep, id_propietario: uuid.UUID, codigo: str, excluir: uuid.UUID | None = None
+) -> None:
+    """El código es único por propietario: un duplicado es un 409, no un fallo interno."""
+    consulta = sa.select(Lote.id).where(Lote.id_propietario == id_propietario, Lote.codigo == codigo)
+    if excluir is not None:
+        consulta = consulta.where(Lote.id != excluir)
+    if sesion.execute(consulta.limit(1)).first() is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Ya existe otro lote con ese código.")
+
+
 @enrutador.post("/lotes", response_model=api.Lote, status_code=status.HTTP_201_CREATED)
 def crear_lote(
     entrada: api.LoteEntrada,
@@ -275,6 +286,7 @@ def crear_lote(
 
     if "PRODUCTOR" not in identidad.roles:
         raise AccesoDenegado("Crear un lote requiere rol PRODUCTOR")
+    _exigir_codigo_libre(sesion, identidad.id, entrada.codigo)
     # El propietario es siempre el usuario autenticado: no se acepta del cliente.
     fila = Lote(id_propietario=identidad.id, **entrada.model_dump())
     sesion.add(fila)
@@ -322,6 +334,7 @@ def actualizar_lote(
     fila = sesion.get(Lote, id_lote, with_for_update=True)
     assert fila is not None
     concurrencia.exigir_revision(fila.revision, concurrencia.revision_desde_if_match(if_match))
+    _exigir_codigo_libre(sesion, fila.id_propietario, entrada.codigo, excluir=fila.id)
     for campo, valor in entrada.model_dump().items():
         setattr(fila, campo, valor)
     fila.revision += 1

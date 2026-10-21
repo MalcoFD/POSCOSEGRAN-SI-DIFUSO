@@ -8,7 +8,8 @@ import {
   tieneRol,
   type Schema,
 } from "../api/client"
-import Panel, { Empty, ErrorMessage, Field, Loading } from "../components/Shared"
+import Panel, { ConfirmDialog, Empty, ErrorMessage, Field, SkeletonPage } from "../components/Shared"
+import { useToast } from "../components/Toast"
 import CondicionEditor from "../components/ConstructorReglas"
 import ConsecuenteEditor from "../components/ConsecuenteRegla"
 import useValidacionEnVivo from "../hooks/useValidacionRegla"
@@ -87,6 +88,8 @@ export default function Adquisicion() {
   const [resultado, setResultado] = useState<Resultado | null>(null)
   const [error, setError] = useState<unknown>(null)
   const [busy, setBusy] = useState(false)
+  const [porActivar, setPorActivar] = useState<Version | null>(null)
+  const avisar = useToast()
   const [motivoActivacion, setMotivoActivacion] = useState<
     Record<string, string>
   >({})
@@ -106,7 +109,7 @@ export default function Adquisicion() {
         </p>
       </Panel>
     )
-  if (catalogo.isLoading || versiones.isLoading) return <Loading />
+  if (catalogo.isLoading || versiones.isLoading) return <SkeletonPage label="Cargando la base de conocimiento…" />
   const parametros = catalogo.data?.parametros || []
 
   // ─── Sincronización visual ↔ código ────────────────────────────
@@ -203,10 +206,12 @@ export default function Adquisicion() {
       setResultado(null)
       setValores({})
       await qc.invalidateQueries()
+      avisar("Versión activada", `Base ${v.version_base} · parámetros ${v.version_parametros}`)
     } catch (err) {
       setError(err)
     } finally {
       setBusy(false)
+      setPorActivar(null)
     }
   }
 
@@ -733,7 +738,7 @@ export default function Adquisicion() {
                       disabled={
                         busy || (motivoActivacion[v.id] || "").length < 15
                       }
-                      onClick={() => void activar(v)}
+                      onClick={() => setPorActivar(v)}
                     >
                       Activar esta versión
                     </button>
@@ -746,6 +751,17 @@ export default function Adquisicion() {
           <Empty>No hay versiones registradas.</Empty>
         )}
       </Panel>
+      <ConfirmDialog
+        open={!!porActivar}
+        title={porActivar ? `¿Activar la base ${porActivar.version_base}?` : "¿Activar la versión?"}
+        confirmLabel="Activar versión"
+        busy={busy}
+        onCancel={() => setPorActivar(null)}
+        onConfirm={() => porActivar && void activar(porActivar)}
+      >
+        <p>Las nuevas evaluaciones usarán esta base de conocimiento. Las anteriores conservan la versión con la que se emitieron.</p>
+        {porActivar && <p><strong>Motivo:</strong> {motivoActivacion[porActivar.id]}</p>}
+      </ConfirmDialog>
     </div>
   )
 }

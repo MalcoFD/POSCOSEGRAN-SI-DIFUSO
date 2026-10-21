@@ -70,6 +70,24 @@ def test_errores_y_permiso(api_real):
     assert c.post('/api/v1/lotes', headers=h("ADMINISTRADOR"), json={"codigo":"X", "variedad":"MAIZ_CHULPI", "uso_final":"ALIMENTACION"}).status_code == 403
 
 
+def test_editar_lote(api_real):
+    c, h, _ = api_real
+    base = {"variedad": "MAIZ_CHULPI", "uso_final": "ALIMENTACION"}
+    a = post(c, "/lotes", {"codigo": str(uuid.uuid4()), **base})
+    b = post(c, "/lotes", {"codigo": str(uuid.uuid4()), **base})
+    nuevo = "CH-" + str(uuid.uuid4())[:8]
+    r = c.patch(f"/api/v1/lotes/{a['id']}", headers={"If-Match": f'"{a["revision"]}"'}, json={"codigo": nuevo, **base})
+    assert r.status_code == 200, r.text
+    assert r.json()["codigo"] == nuevo and r.json()["revision"] == a["revision"] + 1
+    # Revisión obsoleta y código ajeno repetido no alteran el lote.
+    assert c.patch(f"/api/v1/lotes/{a['id']}", headers={"If-Match": f'"{a["revision"]}"'}, json={"codigo": "otro", **base}).status_code == 409
+    r = c.patch(f"/api/v1/lotes/{b['id']}", headers={"If-Match": f'"{b["revision"]}"'}, json={"codigo": nuevo, **base})
+    assert r.status_code == 409 and r.json()["mensaje"] == "Ya existe otro lote con ese código."
+    r = c.post("/api/v1/lotes", headers={"Idempotency-Key": str(uuid.uuid4())}, json={"codigo": nuevo, **base})
+    assert r.status_code == 409
+    assert c.patch(f"/api/v1/lotes/{a['id']}", headers={**h("AJENO"), "If-Match": '"2"'}, json={"codigo": "x", **base}).status_code == 404
+
+
 def test_evaluar_reintentar_historial_cuarentena(api_real):
     c, h, _ = api_real
     u = unidad(c)
