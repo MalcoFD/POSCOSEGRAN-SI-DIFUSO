@@ -1,5 +1,5 @@
 <p align="center">
-  <img src=".github/assets/banner-poscosegran.png" alt="POSCOSEGRAN-DIFUSO: almacenamiento poscosecha de maíz chulpi, granos secos amarillentos de superficie arrugada y curvas de pertenencia difusa" width="100%" />
+  <img src=".github/assets/banner-poscosegran.png" alt="POSCOSEGRAN-DIFUSO: maíz chulpi y flujo de mediciones, interfaz web, API FastAPI y motor Mamdani de conservación y decisión; PostgreSQL conectado con la API" width="100%" />
 </p>
 
 <div align="center">
