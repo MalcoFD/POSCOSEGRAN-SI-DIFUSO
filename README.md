@@ -1,5 +1,5 @@
 <p align="center">
-  <img src=".github/assets/banner-poscosegran.png" alt="POSCOSEGRAN-DIFUSO: mediciones, interfaz web, dos niveles Mamdani y decisión explicable" width="100%" />
+  <img src=".github/assets/banner-poscosegran.png" alt="POSCOSEGRAN-DIFUSO: almacenamiento poscosecha de maíz chulpi, granos secos amarillentos de superficie arrugada y curvas de pertenencia difusa" width="100%" />
 </p>
 
 <div align="center">
@@ -11,7 +11,7 @@
 
 React · FastAPI · Python · PostgreSQL · Mamdani tipo 1
 
-[Inicio rápido](#inicio-rápido) · [Uso](#cómo-usar-el-sistema) · [Modelo difuso](#modelo-difuso) · [Arquitectura](#arquitectura) · [Verificación](#verificación)
+[Aplicación en AWS](https://main.d3lylniuaxtfc1.amplifyapp.com/) · [Inicio rápido](#inicio-rápido) · [Uso](#cómo-usar-el-sistema) · [Modelo difuso](#modelo-difuso) · [Arquitectura](#arquitectura) · [Verificación](#verificación)
 
 </div>
 
@@ -42,6 +42,75 @@ Proyecto académico de **Sistemas Inteligentes**, Facultad de Ingeniería de Sis
 | Fundamento documental | **52 reglas R01–R52**, referencias S01–S09 |
 
 Los 94 campos del catálogo incluyen mediciones, verificaciones y gestión; no son 94 entradas difusas simultáneas. Las reglas documentales y las reglas Mamdani cumplen funciones diferentes.
+
+## Despliegue en AWS
+
+La aplicación fue desplegada en **Amazon Web Services** para su demostración y revisión académica. El acceso directo al frontend de la rama `main` es:
+
+### [Abrir POSCOSEGRAN-DIFUSO](https://main.d3lylniuaxtfc1.amplifyapp.com/)
+
+El enlace abre la aplicación web; para usar los módulos se requiere una sesión y los permisos del rol correspondiente. La contraseña del entorno AWS puede diferir de la local y la administra el responsable del despliegue.
+
+La infraestructura y el proceso de publicación están definidos en [`infra/terraform/`](infra/terraform/), [`amplify.yml`](amplify.yml) y [`scripts/desplegar_aws.ps1`](scripts/desplegar_aws.ps1):
+
+| Componente | Servicio y función |
+| --- | --- |
+| Frontend React/Vite | **AWS Amplify Hosting**: compilación desde GitHub, publicación de `dist/`, HTTPS y reescritura de rutas de la SPA |
+| Acceso al backend | **Amazon API Gateway HTTP API**: endpoint HTTPS con integración privada mediante VPC Link y Cloud Map |
+| API FastAPI | **Amazon ECS Fargate**: ejecución del contenedor de la API después de completar la inicialización |
+| Imágenes de contenedor | **Amazon ECR**: almacenamiento de la imagen del backend |
+| Persistencia | **Amazon RDS for PostgreSQL**: base de datos en la red privada |
+| Configuración privada | **AWS Systems Manager Parameter Store**: credenciales y secretos suministrados a los contenedores |
+| Registros | **Amazon CloudWatch Logs**: registros de inicialización y API |
+
+```mermaid
+flowchart LR
+    N[Navegador] --> F[Amplify Hosting: frontend HTTPS]
+    F --> G[API Gateway HTTPS]
+    G --> V[VPC Link y Cloud Map]
+    V --> A[ECS Fargate: API FastAPI]
+    A --> B[(RDS PostgreSQL privado)]
+    S[Parameter Store] --> A
+    A --> L[CloudWatch Logs]
+```
+
+El frontend utiliza `VITE_AUTH_MODE=local` para la demostración y `VITE_API_URL` con el endpoint HTTPS del backend, según la configuración Terraform. La API usa el entorno `pruebas`, verifica los permisos en el servidor y recibe las credenciales desde Parameter Store. El contenedor `inicializar` prepara roles, migraciones, usuarios y conocimiento; la API arranca solo si esa tarea termina correctamente. Las credenciales administrativas no se entregan al navegador ni al contenedor principal de la API.
+
+<details>
+<summary><strong>Actualizar y operar el despliegue</strong></summary>
+
+Para administrarlo se requieren acceso autorizado a la cuenta AWS, **AWS CLI v2**, **Terraform ≥ 1.6**, **Docker Desktop** y la configuración privada del entorno. `infra/terraform/terraform.tfvars.example` sirve como plantilla; `terraform.tfvars`, el estado y las credenciales permanecen fuera de Git. La región predeterminada de la configuración es `us-east-1` y puede sobrescribirse.
+
+Desde la raíz, para aplicar infraestructura, construir y publicar la imagen en ECR, actualizar ECS y solicitar la compilación de Amplify:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/desplegar_aws.ps1
+# Si se utiliza un perfil de AWS CLI:
+powershell -ExecutionPolicy Bypass -File scripts/desplegar_aws.ps1 -Perfil NOMBRE_DEL_PERFIL
+```
+
+Para actualizar únicamente el backend sobre la infraestructura existente:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/desplegar_aws.ps1 -SaltarTerraform -SaltarFrontend
+```
+
+Amplify tiene activada la compilación automática de la rama configurada (`main` por defecto). `amplify.yml` instala Node.js 22 y pnpm 10.24.0, restaura dependencias y ejecuta `pnpm build`. Las rutas internas de la SPA se reescriben a `index.html`.
+
+Las salidas de Terraform permiten consultar las direcciones y los identificadores necesarios para diagnóstico:
+
+```powershell
+terraform -chdir=infra/terraform output -raw frontend_url
+terraform -chdir=infra/terraform output -raw api_url
+terraform -chdir=infra/terraform output -raw ecs_cluster
+terraform -chdir=infra/terraform output -raw ecs_servicio
+```
+
+Comprueba el endpoint de API seguido de `/salud/bd` para revisar la conexión con PostgreSQL. Consulta los trabajos de Amplify si falla la publicación del frontend y los registros de CloudWatch si fallan la inicialización o la API. El responsable autorizado puede consultar la salida `comando_password_login` para obtener el procedimiento de recuperación de la contraseña de demostración desde SSM; su valor no se publica en este README.
+
+Los recursos AWS generan costos mientras permanezcan activos. Revisa el presupuesto, la facturación y los respaldos antes de pausar o retirar el entorno. La aplicación publicada sigue siendo una demostración académica; el acceso compartido de pruebas no sustituye una configuración de identidad de producción.
+
+</details>
 
 ## Inicio rápido
 
@@ -419,7 +488,7 @@ La demo funciona con acceso local. Supabase real requiere aprovisionamiento y ve
 4. Carga la semilla desde un proceso administrativo y aprovisiona los UUID con `administrar.py`. Los roles declarados por el token no otorgan acceso por sí solos.
 5. Usa HTTPS, conexiones SQL con SSL y CORS explícito. Deshabilita la autoactivación de propuestas por su autor.
 
-La infraestructura AWS en `infra/terraform/` y `scripts/desplegar_aws.ps1` contempla Amplify, ECS Fargate, API Gateway y RDS PostgreSQL. `render.yaml` conserva una alternativa declarativa. Estas configuraciones requieren revisión y aprovisionamiento en destino; no demuestran que exista un servicio público operativo. Comprueba costos y planes del proveedor al desplegar.
+El despliegue AWS y su enlace de acceso están documentados en [Despliegue en AWS](#despliegue-en-aws). `render.yaml` conserva una alternativa declarativa para otro proveedor; no corresponde al alojamiento del enlace Amplify publicado. Comprueba costos y planes del proveedor al crear o modificar entornos.
 
 Estados, variables privadas y credenciales de Terraform están excluidos de Git. El acceso local compartido de una demo no constituye autenticación de producción.
 
