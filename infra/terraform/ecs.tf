@@ -135,11 +135,13 @@ resource "aws_ecs_task_definition" "api" {
       image     = local.imagen_api
       essential = true
       # --proxy-headers: el límite de intentos de login usa la IP real del
-      # cliente que API Gateway envía en X-Forwarded-For.
+      # cliente que API Gateway añade al final de X-Forwarded-For. Solo se
+      # confía en la VPC (VPC Link); con "*" un atacante podría falsificar la
+      # cabecera y saltarse el límite rotando IP inventadas.
       command = [
         "uvicorn", "poscosegran.api.app:crear_app", "--factory",
         "--host", "0.0.0.0", "--port", "8000",
-        "--proxy-headers", "--forwarded-allow-ips", "*",
+        "--proxy-headers", "--forwarded-allow-ips", aws_vpc.principal.cidr_block,
       ]
       portMappings = [{ containerPort = 8000, protocol = "tcp" }]
       dependsOn    = [{ containerName = "inicializar", condition = "SUCCESS" }]
