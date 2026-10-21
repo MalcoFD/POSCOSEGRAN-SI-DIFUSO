@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 Despliegue temporal en AWS (infra/terraform): aplica Terraform, publica la imagen
 de la API en ECR, redespliega ECS Fargate y lanza el build de Amplify.
@@ -39,8 +39,11 @@ $cluster = Get-Salida "ecs_cluster"
 $servicio = Get-Salida "ecs_servicio"
 $registro = $repo.Split("/")[0]
 
+# El pipe se hace en cmd: Windows PowerShell 5.1 re-codifica el texto entre
+# programas nativos y ECR rechaza el token alterado con "400 Bad Request".
+$perfilCmd = if ($Perfil) { "--profile $Perfil" } else { "" }
 Invoke-Paso "docker login en ECR" {
-    aws ecr get-login-password --region $region @perfilArgs | docker login --username AWS --password-stdin $registro
+    cmd /c "aws ecr get-login-password --region $region $perfilCmd | docker login --username AWS --password-stdin $registro"
 }
 Push-Location $projectRoot
 try {

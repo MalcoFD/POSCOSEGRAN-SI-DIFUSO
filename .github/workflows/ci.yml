@@ -84,7 +84,7 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - name: Navegador contra API real
         run: |
-          (cd backend && python -m poscosegran.conocimiento.cargar --activar)
+          (cd backend && python -m poscosegran.conocimiento.cargar --activar) 
           (cd backend && python -m uvicorn poscosegran.api.app:crear_app --factory --host 127.0.0.1 --port 8000) > /tmp/api.log 2>&1 &
           pnpm dev > /tmp/vite.log 2>&1 &
           for i in $(seq 1 30); do
