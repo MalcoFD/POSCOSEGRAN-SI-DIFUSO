@@ -159,9 +159,6 @@ class BaseHechos:
     def pedida(self, solicitud: str) -> bool:
         return bool(self.solicitudes.get(solicitud))
 
-    def episodio_abierto(self, tipos: list[str]) -> bool:
-        return any(e.abierta and e.tipo in tipos for e in self.instantanea.episodios)
-
     def episodios_abiertos(self, tipos: list[str]) -> tuple[Episodio, ...]:
         return tuple(e for e in self.instantanea.episodios if e.abierta and e.tipo in tipos)
 

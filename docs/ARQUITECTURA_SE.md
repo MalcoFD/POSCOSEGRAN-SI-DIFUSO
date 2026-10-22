@@ -31,4 +31,4 @@ El algoritmo central se puede seguir en `sistema_difuso/motor.py` → `sistema_d
 
 La base PostgreSQL conserva la versión, la instantánea efectiva, la traza y las incidencias para consultar resultados históricos. Una inspección compartida se limita a trece campos de infraestructura e higiene; requiere fecha, evidencia, revisión vigente y ausencia de evento invalidante para esa unidad. Datos del grano, contaminación y episodios jamás se copian desde otro lote. Los permisos del productor, técnico, administrador e ingeniero separan operación, asignación de acceso y mantenimiento del modelo.
 
-Las funciones de pertenencia, reglas completas y fundamento se detallan en [CONVERSION_DIFUSA.md](CONVERSION_DIFUSA.md). La [arquitectura experta original](archivo/ARQUITECTURA_SE_2_0.md) está archivada como referencia histórica.
+Las funciones de pertenencia, reglas completas y fundamento se detallan en [CONVERSION_DIFUSA.md](CONVERSION_DIFUSA.md).

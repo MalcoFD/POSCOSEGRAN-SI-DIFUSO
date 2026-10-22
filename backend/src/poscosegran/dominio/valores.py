@@ -23,10 +23,6 @@ class Tri(enum.Enum):
     def __bool__(self) -> bool:  # pragma: no cover
         raise TypeError("use Tri.VERDADERO explícitamente; el valor de verdad no es binario")
 
-    @property
-    def cierto(self) -> bool:
-        return self is Tri.VERDADERO
-
 
 V = Tri.VERDADERO
 F = Tri.FALSO
@@ -154,38 +150,6 @@ def evidencia(dato: Dato, operador: str | None = None, umbral: object = None) ->
         operador=operador,
         umbral=umbral,  # type: ignore[arg-type]
     )
-
-
-def mayor(dato: Dato, umbral: Decimal) -> Tri:
-    numero = dato.numero
-    if numero is None:
-        return NA if dato.no_aplica else D
-    return V if numero > umbral else F
-
-
-def mayor_igual(dato: Dato, umbral: Decimal) -> Tri:
-    numero = dato.numero
-    if numero is None:
-        return NA if dato.no_aplica else D
-    return V if numero >= umbral else F
-
-
-def menor(dato: Dato, umbral: Decimal) -> Tri:
-    numero = dato.numero
-    if numero is None:
-        return NA if dato.no_aplica else D
-    return V if numero < umbral else F
-
-
-def menor_igual(dato: Dato, umbral: Decimal) -> Tri:
-    numero = dato.numero
-    if numero is None:
-        return NA if dato.no_aplica else D
-    return V if numero <= umbral else F
-
-
-def entre(dato: Dato, minimo: Decimal, maximo: Decimal) -> Tri:
-    return y(mayor_igual(dato, minimo), menor_igual(dato, maximo))
 
 
 def comparar(izquierda: Dato, operador: str, derecha: Dato) -> Tri:

@@ -143,17 +143,6 @@ class Instantanea:
     def es_no_hermetico(self) -> bool:
         return self.tipo_almacenamiento is Modalidad.NO_HERMETICO
 
-    @property
-    def cuarentenas_abiertas(self) -> tuple[Episodio, ...]:
-        return tuple(e for e in self.episodios if e.abierta and e.tipo == "CUARENTENA")
-
-    @property
-    def revisiones_abiertas(self) -> tuple[Episodio, ...]:
-        return tuple(
-            e for e in self.episodios
-            if e.abierta and e.tipo in {"REVISION_PLAGAS", "REVISION_TERMICA", "CORRECCION"}
-        )
-
 
 class Solicitud(enum.Enum):
     """Sección 7.1. Varias causas pueden generar la misma solicitud sin anularse."""

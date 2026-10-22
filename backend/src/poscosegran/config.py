@@ -37,7 +37,7 @@ class Configuracion(BaseSettings):
     @field_validator("bd_url_app", mode="before")
     @classmethod
     def normalizar_url_postgres(cls, valor: object) -> object:
-        """Acepta las URL que publica Render con el driver Psycopg del proyecto."""
+        """Acepta URL postgres:// y postgresql:// con el driver Psycopg del proyecto."""
         if isinstance(valor, str):
             if valor.startswith("postgres://"):
                 return "postgresql+psycopg://" + valor.removeprefix("postgres://")

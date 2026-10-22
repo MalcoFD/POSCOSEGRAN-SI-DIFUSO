@@ -49,4 +49,4 @@ El productor registra sus unidades e inspecciones; el técnico accede a recursos
 - `knowledge/difuso/base_conocimiento.yaml`, sección `difuso.decision`: definiciones declarativas que se versionan y pueden inspeccionarse.
 - `backend/src/poscosegran/inferencia/`: hechos, cálculo documental, adquisición y explicación comunes. `sistema_experto/motor.py` conserva el resolutor R30 exclusivamente para versiones históricas.
 
-El [plan de refactorización](../PLAN_REFACTORIZACION_SISTEMA_DIFUSO.md) contiene la matriz R01–R52 y los criterios de aceptación. El [informe de verificación final](VERIFICACION_MAMDANI_FINAL.md) registra pruebas, comparación y límites. La descripción de la base 4.0 se conserva en [el archivo histórico](archivo/CONVERSION_DIFUSA_4_0.md).
+El [informe de verificación final](VERIFICACION_MAMDANI_FINAL.md) registra pruebas, comparación y límites. Las bases históricas 3.1 y 4.0 se conservan en `knowledge/historico_mamdani_3_1/` y `knowledge/historico_mamdani_4_0/` para reproducir evaluaciones antiguas.

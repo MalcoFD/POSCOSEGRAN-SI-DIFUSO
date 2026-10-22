@@ -22,10 +22,6 @@ class Identidad:
         return "TECNICO" in self.roles
 
     @property
-    def es_productor(self) -> bool:
-        return "PRODUCTOR" in self.roles
-
-    @property
     def es_administrador(self) -> bool:
         return "ADMINISTRADOR" in self.roles
 

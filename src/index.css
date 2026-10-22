@@ -401,7 +401,7 @@ main .code-block header button:hover { background: rgba(255, 255, 255, .08); }
 .worked code { font-size: 13px; line-height: 1.7; white-space: pre-line; }
 .nota-prototipo { font-size: 13px; padding: 10px 14px; border-radius: var(--radius-sm); background: var(--color-corn-light); border: 1px solid #EAD4A6; color: var(--color-neutral-ink); }
 
-/* Sistema experto: explicación, "¿por qué se pide?" y adquisición */
+/* Sistema difuso: explicación, "¿por qué se pide?" y adquisición */
 .cadena { list-style: none; margin: 0; padding: 0; counter-reset: paso; }
 .cadena li { position: relative; padding: 10px 12px 10px 44px; border-left: 2px solid #CFDCD3; margin-left: 14px; }
 .cadena li::before { counter-increment: paso; content: counter(paso); position: absolute; left: -14px; top: 10px; width: 26px; height: 26px; border-radius: 50%; background: var(--color-forest); color: #fff; font-size: 12px; display: grid; place-items: center; }
