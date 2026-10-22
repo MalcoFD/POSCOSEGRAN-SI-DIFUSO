@@ -15,7 +15,6 @@ COPY backend/alembic.ini ./
 COPY backend/scripts ./scripts
 COPY knowledge/*.yaml /knowledge/
 COPY knowledge/casos_referencia.json /knowledge/
-COPY knowledge/difuso/*.yaml /knowledge/difuso/
 # Semilla de la base de conocimiento y casos de referencia del módulo de adquisición.
 ENV POSCOSEGRAN_KNOWLEDGE=/knowledge
 

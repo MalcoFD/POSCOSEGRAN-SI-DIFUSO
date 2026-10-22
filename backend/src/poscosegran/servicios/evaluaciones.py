@@ -359,7 +359,6 @@ def persistir(
         fecha_evaluacion=instantanea.fecha_evaluacion,
         fase=entrada.fase,
         decision_final=resultado.decision_final,
-        rama_r30=resultado.rama_r30,
         entrada_efectiva=efectiva,
         revision_unidad_usada=unidad.revision,
         revision_almacen_usada=almacen.revision,

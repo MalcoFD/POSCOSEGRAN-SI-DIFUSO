@@ -72,7 +72,7 @@ export default function Resultado() {
     <details className="panel">
       <summary><strong>Ver fundamento técnico</strong></summary>
       <div className="stack">
-        <p className="mono muted" style={{ margin: 0, fontSize: 13 }}>{e.decision_final} · {e.rama_r30}</p>
+        <p className="mono muted" style={{ margin: 0, fontSize: 13 }}>{e.decision_final} · decisión Mamdani</p>
         {x && <Explicado x={x} />}
         <h3>Motivos, evidencias y fuentes</h3>
         {e.motivos.map(m => <details key={m.id} className="reason"><summary><span className="badge">{m.regla}</span> {m.mensaje}</summary><p>Fundamento: {nombre(m.fundamento)}</p>{m.evidencias.map((ev, i) => <p key={i}>{etiqueta(ev.campo)}: {String(ev.valor_observado ?? 'Desconocido')} {ev.unidad} {ev.operador && `· ${ev.operador} ${ev.umbral ?? ''}`} · {fecha(ev.fecha_observacion)}</p>)}{m.fuentes.map((f, i) => <div key={i}><strong>{f.id_fuente}</strong> {f.localizador}<Source text={catalogo.data?.fuentes.find(s => s.id === f.id_fuente)?.referencia_markdown || 'Fuente disponible en la base de conocimiento'} /></div>)}</details>)}
@@ -90,7 +90,7 @@ export default function Resultado() {
   </div>
 }
 
-/** Módulo de explicación: ¿cómo?, ¿por qué no? y hechos del caso. */
+/** Módulo de explicación: reglas disparadas, centroide Mamdani y hechos del caso. */
 function Explicado({ x }: { x: Explicacion }) {
   const inferidos = new Set(x.cadena.map(p => p.conclusion).filter(Boolean))
   return <div className="stack">
@@ -100,19 +100,8 @@ function Explicado({ x }: { x: Explicacion }) {
         <small>Porque: {p.porque.map(s => inferidos.has(s) ? s : etiqueta(s)).join('; ') || 'condición cumplida'}</small>
         {p.antecedente && <small>Regla: {p.antecedente}</small>}
         <small>Etapa {p.etapa}, pasada {p.pasada}</small></li>)}
-      <li className="decision-final"><strong>{x.rama}</strong> → {x.etiqueta}<small>{x.rama === 'MAMDANI_FINAL' ? 'Clasificación del centroide de la salida final Mamdani.' : 'Primera rama de R30 que se cumple, en orden de prioridad.'}</small></li>
+      <li className="decision-final"><strong>Decisión Mamdani</strong> → {x.etiqueta}<small>{x.resumen}</small></li>
     </ol> : <p>La decisión no depende de ninguna regla diagnóstica: {x.resumen}</p>}
-
-    {x.por_que_no.length > 0 && <>
-      <h3>¿Por qué no se autorizó{x.decision.startsWith('AUTORIZAR') ? ' con controles ordinarios' : ''}?</h3>
-      {x.por_que_no.map(r => <div className="reason" key={r.rama}><strong>{r.rama} · {decision(r.decision)}</strong>
-        <ul>{r.faltan.map((f, i) => <li className="falta" key={i}>{f}</li>)}</ul></div>)}
-    </>}
-
-    {x.ramas.length > 0 && <details><summary>Orden histórico de R30</summary>
-      <div className="table-scroll"><table><thead><tr><th>Rama</th><th>Decisión</th><th>Condición</th></tr></thead>
-        <tbody>{x.ramas.map(r => <tr key={r.rama}><td>{r.rama}{r.aplicada ? ' ✓' : ''}</td><td>{decision(r.decision)}</td><td>{nombre(r.valor)}</td></tr>)}</tbody></table></div>
-    </details>}
 
     <details><summary>Hechos del caso ({x.hechos_iniciales.length} iniciales · {x.hechos_inferidos.length} inferidos)</summary>
       <p><strong>Inferidos por el motor:</strong></p><div className="chips">{x.hechos_inferidos.map(h => <span className="chip" key={h}>{h}</span>)}</div>
@@ -120,10 +109,6 @@ function Explicado({ x }: { x: Explicacion }) {
       <div className="table-scroll"><table><thead><tr><th>Dato</th><th>Valor</th><th>Procedencia</th></tr></thead>
         <tbody>{x.hechos_iniciales.map(h => <tr key={h.campo}><td>{etiqueta(h.campo)}</td><td>{String(h.valor)}</td><td>{nombre(h.procedencia)}</td></tr>)}</tbody></table></div>
       {x.no_aplicables.length > 0 && <p className="muted">Reglas que no aplican a esta modalidad o fase: {x.no_aplicables.join(', ')}.</p>}
-    </details>
-
-    <details><summary>Traza completa del motor ({x.traza_completa.length} disparos)</summary>
-      {x.traza_completa.map(p => <p className="row" key={p.orden}><span>{p.orden}. {p.regla} · {p.etapa} · pasada {p.pasada}</span><span>{p.conclusion || p.solicitudes.join(', ')}</span></p>)}
     </details>
   </div>
 }

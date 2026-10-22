@@ -36,16 +36,6 @@ class Activacion:
     solicitudes: tuple[str, ...]
 
 
-@dataclass(frozen=True, slots=True)
-class EvaluacionRama:
-    """Resultado de comprobar una rama de R30, con lo que le faltó si no aplicó."""
-
-    rama: str
-    decision: str
-    valor: str
-    fallidas: tuple[str, ...]
-
-
 def _dato_de_tri(campo: str, valor: Tri, fecha: datetime) -> Dato:
     if valor is Tri.VERDADERO or valor is Tri.FALSO:
         return Dato(
@@ -97,7 +87,6 @@ class BaseHechos:
     disparadas: set[str] = field(default_factory=set)
     no_aplicables: list[str] = field(default_factory=list)
     pendientes: list[Pendiente] | None = None
-    ramas: list[EvaluacionRama] = field(default_factory=list)
     difuso: dict[str, Any] | None = None
 
     @classmethod
@@ -198,4 +187,4 @@ class BaseHechos:
         return True
 
 
-__all__ = ["Activacion", "BaseHechos", "EvaluacionRama", "Procedencia"]
+__all__ = ["Activacion", "BaseHechos", "Procedencia"]

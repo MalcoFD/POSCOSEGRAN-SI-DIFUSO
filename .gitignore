@@ -53,6 +53,4 @@ docs/superpowers
 /docs/*
 !/docs/openapi.json
 /knowledge/*.md
-# Entrada documental de la herramienta historica de transcripcion.
-!/knowledge/POSCOSEGRAN_30_reglas_base_conocimiento_actualizado.md
 *.docx

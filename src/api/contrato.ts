@@ -269,7 +269,7 @@ export interface paths {
         };
         /**
          * Explicacion
-         * @description Módulo de explicación: ¿cómo se llegó a la decisión y qué faltó para autorizar?
+         * @description Módulo de explicación: reglas disparadas y centroide Mamdani de la decisión.
          *
          *     Se reproduce la evaluación con los hechos iniciales guardados y la versión exacta
          *     de la base con que se emitió. El motor es determinista y el reloj forma parte de
@@ -913,10 +913,6 @@ export interface components {
             decision_antes: string;
             /** Decision Despues */
             decision_despues: string;
-            /** Rama Antes */
-            rama_antes: string;
-            /** Rama Despues */
-            rama_despues: string;
             /** Reglas Nuevas */
             reglas_nuevas: string[];
             /** Reglas Retiradas */
@@ -928,8 +924,6 @@ export interface components {
             version_base: string;
             /** Reglas */
             reglas: components["schemas"]["Regla"][];
-            /** Ramas R30 */
-            ramas_r30: components["schemas"]["Regla"][];
             /** Fuentes */
             fuentes: components["schemas"]["Fuente"][];
             /** Version Parametros */
@@ -1181,11 +1175,6 @@ export interface components {
              * @enum {string}
              */
             decision_final: "CUARENTENA" | "BLOQUEAR_INGRESO" | "RETIRAR_LOTE" | "CORREGIR_Y_REEVALUAR" | "SIN_CONCLUSION_AUTOMATICA" | "AUTORIZAR_CON_MONITOREO" | "AUTORIZAR_ALMACENAMIENTO";
-            /**
-             * Rama R30
-             * @enum {string}
-             */
-            rama_r30: "MAMDANI_FINAL" | "R30.1" | "R30.2" | "R30.3" | "R30.4" | "R30.5" | "R30.6" | "R30.7" | "R30.8" | "R30.9";
             /** Motivos */
             motivos: components["schemas"]["Motivo"][];
             /** Acciones Requeridas */
@@ -1322,24 +1311,13 @@ export interface components {
             decision: string;
             /** Etiqueta */
             etiqueta: string;
-            /** Rama */
-            rama: string;
             /** Resumen */
             resumen: string;
             /**
              * Cadena
-             * @description ¿Cómo? Reglas que llevaron a la decisión.
+             * @description ¿Cómo? Reglas documentales disparadas, en orden.
              */
             cadena: components["schemas"]["PasoExplicacion"][];
-            /** Traza Completa */
-            traza_completa: components["schemas"]["PasoExplicacion"][];
-            /** Ramas */
-            ramas: components["schemas"]["RamaExplicada"][];
-            /**
-             * Por Que No
-             * @description Qué le faltó a cada autorización no concedida.
-             */
-            por_que_no: components["schemas"]["RamaExplicada"][];
             /** Hechos Iniciales */
             hechos_iniciales: components["schemas"]["HechoInicial"][];
             /** Hechos Inferidos */
@@ -1886,22 +1864,6 @@ export interface components {
             cambios_reglas: components["schemas"]["CambioRegla"][];
             impacto: components["schemas"]["Impacto"] | null;
             version?: components["schemas"]["VersionConocimientoResumen"] | null;
-        };
-        /** RamaExplicada */
-        RamaExplicada: {
-            /** Rama */
-            rama: string;
-            /** Decision */
-            decision: string;
-            /** Aplicada */
-            aplicada: boolean;
-            /**
-             * Valor
-             * @enum {string}
-             */
-            valor: "VERDADERO" | "FALSO" | "DESCONOCIDO" | "NO_APLICA";
-            /** Faltan */
-            faltan: string[];
         };
         /** RecursoAsignable */
         RecursoAsignable: {

@@ -1,7 +1,7 @@
 """Límite de peticiones por usuario.
 
 Implementación en memoria: sirve para un proceso. Con varias réplicas hace falta
-un contador compartido; queda anotado como pendiente en docs/SEGURIDAD.md.
+un contador compartido; queda anotado como pendiente en README.md (seguridad).
 """
 
 from __future__ import annotations

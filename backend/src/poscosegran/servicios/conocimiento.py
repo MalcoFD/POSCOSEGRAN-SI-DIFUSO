@@ -17,8 +17,7 @@ from sqlalchemy.orm import Session
 
 from ..db.modelos import Fuente, Regla, VersionConocimiento
 from ..inferencia.base_conocimiento import BaseConocimiento, desde_contenido
-from ..inferencia.motor import VERSION_MOTOR
-from ..sistema_difuso.motor import version_modelo
+from ..sistema_difuso.motor import VERSION_MOTOR
 
 _bases: dict[uuid.UUID, BaseConocimiento] = {}
 
@@ -76,7 +75,7 @@ def registrar(
     version = VersionConocimiento(
         version_base=base.version_base,
         version_parametros=base.version_parametros,
-        version_motor=version_modelo(base) if 'difuso' in contenido['operativa'] else VERSION_MOTOR,
+        version_motor=VERSION_MOTOR,
         hash_contenido=base.hash,
         ruta_archivo=ruta_archivo,
         notas=motivo,
@@ -93,20 +92,18 @@ def registrar(
     documental = base.documental
     for fuente in documental.get("fuentes", []):
         sesion.add(Fuente(id_version=version.id, codigo=fuente["id"], referencia_markdown=fuente["referencia_markdown"]))
-    for es_rama, clave in ((False, "reglas"), (True, "ramas_r30")):
-        for orden, regla in enumerate(documental.get(clave, []), start=1):
-            sesion.add(
-                Regla(
-                    id_version=version.id,
-                    codigo=regla["id"],
-                    es_rama=es_rama,
-                    orden=orden,
-                    antecedente=regla["antecedente"],
-                    consecuente=regla["consecuente"],
-                    accion=regla["accion"],
-                    fundamento_markdown=regla["fundamento_markdown"],
-                )
+    for orden, regla in enumerate(documental.get("reglas", []), start=1):
+        sesion.add(
+            Regla(
+                id_version=version.id,
+                codigo=regla["id"],
+                orden=orden,
+                antecedente=regla["antecedente"],
+                consecuente=regla["consecuente"],
+                accion=regla["accion"],
+                fundamento_markdown=regla["fundamento_markdown"],
             )
+        )
     sesion.flush()
     return version
 

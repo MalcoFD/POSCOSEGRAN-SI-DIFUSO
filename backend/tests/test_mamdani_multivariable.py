@@ -1,28 +1,27 @@
-"""Núcleo reducido: interacciones reales, cobertura y restricciones conservadas."""
+"""Núcleo de conservación: interacciones reales, cobertura y restricciones conservadas."""
 from dataclasses import replace
 from itertools import product
 import copy
 
 import pytest
 
-from casos.base import con, num, sin
-from test_sistema_difuso import completa
+from casos.base import base as completa, con, num, sin
 from poscosegran.dominio.hechos import Modalidad
 from poscosegran.dominio.motor import evaluar
-from poscosegran.inferencia.base_conocimiento import cargar, ruta_por_defecto
+from poscosegran.inferencia.base_conocimiento import cargar
 from poscosegran.inferencia.base_conocimiento import BaseInvalida, desde_contenido
 
 
 def modelo():
-    return cargar(ruta_por_defecto() / 'historico_mamdani_4_0')
+    return cargar()
 
 
 def test_nucleo_cuatro_entradas_nueve_reglas():
     m = modelo().contenido['operativa']['difuso']['modulos']
-    assert modelo().version_base == '4.0'
+    assert modelo().version_base == '5.1'
     assert len(m) == 1 and len(m[0]['entradas']) == 4 and len(m[0]['reglas']) == 9
     r = evaluar(completa(), modelo())
-    assert r.version_motor == '2.0.0-mamdani'
+    assert r.version_motor == '3.0.0-mamdani'
     assert r.decision_final == 'AUTORIZAR_ALMACENAMIENTO'
 
 
@@ -66,12 +65,6 @@ def test_malla_numerica_sin_huecos_en_ambas_modalidades():
             m = evaluar(b, modelo()).difuso['modulos'][0]
             assert m['estado'] == 'CALCULADO', (modalidad, h, t, hr, d)
             assert 0 <= m['centroide'] <= 100
-
-
-def test_reproduccion_mamdani_31():
-    anterior = cargar(ruta_por_defecto() / 'historico_mamdani_3_1')
-    r = evaluar(completa(), anterior)
-    assert r.version_motor == '1.0.0-mamdani' and len(r.difuso['modulos']) == 20
 
 
 @pytest.mark.parametrize('defecto', ['hueco', 'referencia', 'guarda', 'duplicado', 'conjunto'])

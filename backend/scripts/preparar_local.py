@@ -71,7 +71,7 @@ with Session(admin) as db, db.begin():
 # Carga administrativa de la semilla de knowledge/.
 os.environ["POSCOSEGRAN_BD_URL_APP"] = str(admin.url.render_as_string(hide_password=False))
 obtener_configuracion.cache_clear()
-print(cargar(BACKEND.parent / 'knowledge' / 'difuso', activar=True, notas='Semilla Mamdani de decisión 5.0; historial anterior conservado'))
+print(cargar(BACKEND.parent / 'knowledge', activar=True, notas='Semilla Mamdani 5.1: decisión final por inferencia difusa'))
 with admin.begin() as conn:
     conn.exec_driver_sql("GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA poscosegran TO poscosegran_app")
     conn.exec_driver_sql("GRANT DELETE ON poscosegran.borrador, poscosegran.idempotencia TO poscosegran_app")

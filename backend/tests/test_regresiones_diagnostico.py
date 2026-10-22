@@ -48,22 +48,15 @@ def test_no_aplica_vencimiento_con_contexto():
 
 @pytest.mark.bd
 def test_api_mamdani_guarda_traza_y_reproduce_historial(api_real):
-    from pathlib import Path
-    from poscosegran.conocimiento.cargar import cargar
     c, _, _ = api_real
     u = unidad(c)
-    anterior = post(c, f'/unidades/{u["id"]}/evaluaciones', entrada(u))
-    cargar(Path(__file__).resolve().parents[2] / 'knowledge/difuso', activar=True, notas='Prueba aislada Mamdani')
-    u = c.get('/api/v1/unidades/' + u['id']).json()
-    nuevo = post(c, f'/unidades/{u["id"]}/evaluaciones', entrada(u))
-    e = nuevo['evaluacion']
+    e = post(c, f'/unidades/{u["id"]}/evaluaciones', entrada(u))['evaluacion']
     assert e['difuso']['tipo'] == 'MAMDANI_TIPO_1'
     assert e['version_motor'] == '3.0.0-mamdani'
     detalle = c.get(f'/api/v1/evaluaciones/{e["id"]}/explicacion')
     assert detalle.status_code == 200, detalle.text
     assert detalle.json()['difuso']['modulos']
-    viejo = c.get(f'/api/v1/evaluaciones/{anterior["evaluacion"]["id"]}/explicacion')
-    assert viejo.status_code == 200 and viejo.json()['difuso'] is None
+    assert detalle.json()['difuso']['decision']['decision'] == e['decision_final']
 
 
 @pytest.mark.bd
@@ -72,7 +65,7 @@ def test_adquisicion_valida_y_simula_curvas_mamdani(api_real):
     from pathlib import Path
     from poscosegran.conocimiento.cargar import cargar
     c, h, _ = api_real
-    cargar(Path(__file__).resolve().parents[2] / 'knowledge/difuso', activar=True, notas='Prueba de adquisición difusa')
+    cargar(Path(__file__).resolve().parents[2] / 'knowledge', activar=True, notas='Prueba de adquisición difusa')
     modelo = c.get('/api/v1/conocimiento').json()['modelo_difuso']
     propuesta = copy.deepcopy(modelo)
     propuesta['politica']['monitoreo_desde'] = 30
@@ -88,11 +81,11 @@ def test_adquisicion_valida_y_simula_curvas_mamdani(api_real):
 @pytest.mark.bd
 def test_autorizacion_difusa_ordinaria_y_seguimiento_real(api_real):
     from pathlib import Path
-    from test_sistema_difuso import completa
+    from casos.base import base as completa
     from poscosegran.conocimiento.cargar import cargar
     from poscosegran.dominio.campos import CAMPOS
     c, _, _ = api_real
-    cargar(Path(__file__).resolve().parents[2] / 'knowledge/difuso', activar=True, notas='Verificación de autorización difusa')
+    cargar(Path(__file__).resolve().parents[2] / 'knowledge', activar=True, notas='Verificación de autorización difusa')
     u = unidad(c)
 
     def completa_entrada(u, temperatura):

@@ -34,7 +34,7 @@ Proyecto académico de **Sistemas Inteligentes**, Facultad de Ingeniería de Sis
 
 | Modelo vigente | Contenido |
 | --- | --- |
-| Base de conocimiento | **5.0** |
+| Base de conocimiento | **5.1** |
 | Motor difuso | **3.0.0-mamdani** |
 | Conservación | 4 mediciones; 3 aplicables en hermético; **9 reglas D01–D09** |
 | Decisión final | 11 antecedentes derivados o de contexto; **14 reglas MF01–MF14** |
@@ -254,7 +254,7 @@ Las once entradas finales son `cuarentena`, `suspension`, `correccion`, `pendien
 | MF10–MF11 | Evidencia completa, plan y conservación media o alta | Monitorear o corregir |
 | MF12–MF14 | Evidencia completa y sin plan; según conservación plenamente baja y seguimiento | Corregir o autorizar |
 
-Los antecedentes completos están en [la base difusa](knowledge/difuso/base_conocimiento.yaml). Las negaciones exigen ausencia conocida. Si hay cuarentena, las reglas incompatibles tienen activación cero; una medición favorable no compensa el hallazgo. La falta de plan impide una autorización de monitoreo sin respaldo.
+Los antecedentes completos están en [la base difusa](knowledge/base_conocimiento.yaml). Las negaciones exigen ausencia conocida. Si hay cuarentena, las reglas incompatibles tienen activación cero; una medición favorable no compensa el hallazgo. La falta de plan impide una autorización de monitoreo sin respaldo.
 
 | Centroide final `z` | Acción | Función del consecuente |
 | --- | --- | --- |
@@ -266,7 +266,7 @@ Los antecedentes completos están en [la base difusa](knowledge/difuso/base_cono
 | 85 ≤ z < 93,5 | `RETIRAR_LOTE` | Tri(86; 89; 92) |
 | 93,5 ≤ z ≤ 100 | `CUARENTENA` | Tri(95; 98; 100) |
 
-El último límite almacenado es 101 para incluir todo el dominio hasta 100. La decisión vigente se obtiene del centroide final; las ramas deterministas de R30 corresponden a versiones históricas.
+El último límite almacenado es 101 para incluir todo el dominio hasta 100. Toda decisión se obtiene de la clasificación del centroide final.
 
 ### Operadores y núcleo en Python
 
@@ -285,8 +285,8 @@ El centroide integra la **envolvente máxima de los conjuntos recortados**, aña
 | [reglas.py](backend/src/poscosegran/sistema_difuso/reglas.py) | Activación recursiva por mínimo y máximo |
 | [defuzzificacion.py](backend/src/poscosegran/sistema_difuso/defuzzificacion.py) | Envolvente, área y centroide exacto por tramos |
 | [decision.py](backend/src/poscosegran/sistema_difuso/decision.py) | Once antecedentes, catorce reglas y clasificación final |
-| [base_conocimiento.yaml](knowledge/difuso/base_conocimiento.yaml) | Variables, curvas, reglas y parámetros operativos |
-| [catalogo.yaml](knowledge/difuso/catalogo.yaml) | Reglas documentales y referencias |
+| [base_conocimiento.yaml](knowledge/base_conocimiento.yaml) | Variables, curvas, reglas y parámetros operativos |
+| [catalogo.yaml](knowledge/catalogo.yaml) | Reglas documentales y referencias |
 
 > [!IMPORTANT]
 > Curvas, interacciones y cortes son **políticas del prototipo**, pendientes de calibración agronómica para chulpi. Las fuentes respaldan condiciones y referencias documentales; estos índices no son probabilidades de inocuidad ni certifican ausencia de micotoxinas.
@@ -344,7 +344,7 @@ POSCOSEGRAN-SI-DIFUSO/
 │   ├── scripts/           Preparación y mantenimiento
 │   ├── sql/               Roles y privilegios
 │   └── tests/             Pruebas Python e integración
-├── knowledge/             Semillas, catálogo e históricos reproducibles
+├── knowledge/             Base difusa, catálogo y casos de referencia
 ├── docs/openapi.json      Contrato generado utilizado por el proyecto
 ├── tests/e2e/             Recorridos de navegador
 ├── scripts/               Inicio Docker, verificación y despliegue
@@ -437,11 +437,11 @@ Usa `http://localhost:8443` con Vite. Playwright obtiene la contraseña local de
 
 </details>
 
-La comprobación focalizada ejecutada durante la revisión documental aprobó **69 pruebas**. Cubre pertenencias, agregación, centroides, transiciones, exclusiones críticas y compatibilidad histórica; no sustituye la suite completa con PostgreSQL ni una validación agronómica.
+La comprobación focalizada ejecutada durante la revisión documental aprobó **69 pruebas**. Cubre pertenencias, agregación, centroides, transiciones y exclusiones críticas; no sustituye la suite completa con PostgreSQL ni una validación agronómica.
 
 `exportar_contrato.py` actualiza `docs/openapi.json`, `src/campos.json` y `src/alcance-inspeccion.json`; `pnpm api:types` actualiza `src/api/contrato.ts`. Conserva estos archivos y revisa sus diferencias al cambiar los esquemas.
 
-La semilla vigente está en `knowledge/difuso/`. Los YAML de la raíz de `knowledge/`, `historico_mamdani_3_1/`, `historico_mamdani_4_0/` y `casos_referencia.json` permiten reproducir versiones anteriores. No se sobrescriben para hacer coincidir resultados nuevos. Las 242 expectativas históricas corresponden a la base determinista; no miden precisión agronómica del modelo actual.
+La semilla vigente está en `knowledge/` (`base_conocimiento.yaml` y `catalogo.yaml`). `casos_referencia.json` congela 243 casos evaluados con esa base; se regenera con `backend/scripts/generar_casos_referencia.py` solo tras un cambio revisado del conocimiento. Las expectativas comprueban reproducibilidad, no precisión agronómica.
 
 ## Operación y despliegue
 
@@ -519,7 +519,7 @@ El sistema es un prototipo académico para maíz chulpi. Las curvas, las interac
 
 ## Fundamento documental y equipo
 
-El [catálogo de conocimiento](knowledge/difuso/catalogo.yaml) conserva los localizadores S01–S09: SENASA, FAO, Codex/FAO-OMS, Purdue Extension y NDSU Extension. Distingue criterios publicados, transferidos, mixtos y políticas del prototipo. Los criterios comerciales y su aplicabilidad al chulpi requieren confirmación técnica.
+El [catálogo de conocimiento](knowledge/catalogo.yaml) conserva los localizadores S01–S09: SENASA, FAO, Codex/FAO-OMS, Purdue Extension y NDSU Extension. Distingue criterios publicados, transferidos, mixtos y políticas del prototipo. Los criterios comerciales y su aplicabilidad al chulpi requieren confirmación técnica.
 
 Antecedentes del problema y de la técnica: [Díaz-Valderrama et al. (2020)](https://doi.org/10.1371/journal.pone.0240857), [Zadeh (1965)](https://doi.org/10.1016/S0019-9958(65)90241-X) y [Mamdani y Assilian (1975)](https://doi.org/10.1016/S0020-7373(75)80002-2).
 

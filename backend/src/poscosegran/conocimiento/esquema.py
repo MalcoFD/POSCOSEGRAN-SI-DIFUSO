@@ -11,8 +11,6 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-CODIGO_REGLA = re.compile(r"^R(0[1-9]|[1-4][0-9]|5[0-2])$")
-CODIGO_RAMA = re.compile(r"^R30\.[1-9]$")
 CODIGO_FUENTE = re.compile(r"^S0[1-9]$")
 
 
@@ -43,7 +41,7 @@ class ReglaCatalogo(BaseModel):
 
 
 class Catalogo(BaseModel):
-    """R01–R30 completas, las nueve ramas de R30 y las fuentes que las respaldan."""
+    """R01–R52 completas y las fuentes que las respaldan."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -51,31 +49,22 @@ class Catalogo(BaseModel):
     version_parametros: str = Field(min_length=1)
     version_motor: str = Field(min_length=1)
     reglas: list[ReglaCatalogo]
-    ramas_r30: list[ReglaCatalogo]
     fuentes: list[FuenteCatalogo]
 
     @model_validator(mode="after")
     def _completitud(self) -> "Catalogo":
         codigos = [regla.id for regla in self.reglas]
-        esperados_30 = [f"R{numero:02d}" for numero in range(1, 31)]
-        esperados_52 = [f"R{numero:02d}" for numero in range(1, 53)]
-        if codigos not in (esperados_30, esperados_52):
-            faltan = sorted(set(esperados_30) - set(codigos))
-            sobran = sorted(set(codigos) - set(esperados_52))
+        esperados = [f"R{numero:02d}" for numero in range(1, 53)]
+        if codigos != esperados:
+            faltan = sorted(set(esperados) - set(codigos))
+            sobran = sorted(set(codigos) - set(esperados))
             raise ValueError(
-                f"las reglas deben ser R01…R30 o R01…R52 en orden consecutivo. "
+                f"las reglas deben ser R01…R52 en orden consecutivo. "
                 f"Faltan: {faltan or 'ninguna'}. No reconocidas: {sobran or 'ninguna'}"
             )
 
-        ramas = [rama.id for rama in self.ramas_r30]
-        esperadas = [f"R30.{numero}" for numero in range(1, 10)]
-        if ramas != esperadas:
-            raise ValueError(
-                "las ramas deben ser R30.1…R30.9 en el orden de resolución de la base"
-            )
-
         declaradas = {fuente.id for fuente in self.fuentes}
-        for regla in [*self.reglas, *self.ramas_r30]:
+        for regla in self.reglas:
             desconocidas = sorted(set(regla.fuentes) - declaradas)
             if desconocidas:
                 raise ValueError(f"{regla.id} cita fuentes no declaradas: {desconocidas}")

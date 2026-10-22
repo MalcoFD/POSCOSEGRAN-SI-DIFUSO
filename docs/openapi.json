@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "POSCOSEGRAN API",
-    "description": "Sistema experto para condiciones de almacenamiento poscosecha de maíz chulpi. Evalúa condiciones de almacenamiento; no certifica inocuidad, ausencia de micotoxinas ni aptitud para consumo.",
+    "description": "Sistema de inferencia difusa Mamdani para condiciones de almacenamiento poscosecha de maíz chulpi. Evalúa condiciones de almacenamiento; no certifica inocuidad, ausencia de micotoxinas ni aptitud para consumo.",
     "version": "0.7.0"
   },
   "paths": {
@@ -1591,7 +1591,7 @@
           "evaluacion"
         ],
         "summary": "Explicacion",
-        "description": "Módulo de explicación: ¿cómo se llegó a la decisión y qué faltó para autorizar?\n\nSe reproduce la evaluación con los hechos iniciales guardados y la versión exacta\nde la base con que se emitió. El motor es determinista y el reloj forma parte de\nlos hechos, así que la traza es la de la evaluación original; si la decisión\nreproducida no coincide con la guardada, se rechaza en lugar de explicar otra cosa.",
+        "description": "Módulo de explicación: reglas disparadas y centroide Mamdani de la decisión.\n\nSe reproduce la evaluación con los hechos iniciales guardados y la versión exacta\nde la base con que se emitió. El motor es determinista y el reloj forma parte de\nlos hechos, así que la traza es la de la evaluación original; si la decisión\nreproducida no coincide con la guardada, se rechaza en lugar de explicar otra cosa.",
         "operationId": "explicacion_api_v1_evaluaciones__id_evaluacion__explicacion_get",
         "parameters": [
           {
@@ -4236,14 +4236,6 @@
             "type": "string",
             "title": "Decision Despues"
           },
-          "rama_antes": {
-            "type": "string",
-            "title": "Rama Antes"
-          },
-          "rama_despues": {
-            "type": "string",
-            "title": "Rama Despues"
-          },
           "reglas_nuevas": {
             "items": {
               "type": "string"
@@ -4266,8 +4258,6 @@
           "origen",
           "decision_antes",
           "decision_despues",
-          "rama_antes",
-          "rama_despues",
           "reglas_nuevas",
           "reglas_retiradas"
         ],
@@ -4285,13 +4275,6 @@
             },
             "type": "array",
             "title": "Reglas"
-          },
-          "ramas_r30": {
-            "items": {
-              "$ref": "#/components/schemas/Regla"
-            },
-            "type": "array",
-            "title": "Ramas R30"
           },
           "fuentes": {
             "items": {
@@ -4357,7 +4340,6 @@
         "required": [
           "version_base",
           "reglas",
-          "ramas_r30",
           "fuentes"
         ],
         "title": "Catalogo"
@@ -4869,22 +4851,6 @@
             ],
             "title": "Decision Final"
           },
-          "rama_r30": {
-            "type": "string",
-            "enum": [
-              "MAMDANI_FINAL",
-              "R30.1",
-              "R30.2",
-              "R30.3",
-              "R30.4",
-              "R30.5",
-              "R30.6",
-              "R30.7",
-              "R30.8",
-              "R30.9"
-            ],
-            "title": "Rama R30"
-          },
           "motivos": {
             "items": {
               "$ref": "#/components/schemas/Motivo"
@@ -4990,7 +4956,6 @@
           "fecha_evaluacion",
           "fase",
           "decision_final",
-          "rama_r30",
           "motivos",
           "acciones_requeridas",
           "datos_pendientes",
@@ -5382,10 +5347,6 @@
             "type": "string",
             "title": "Etiqueta"
           },
-          "rama": {
-            "type": "string",
-            "title": "Rama"
-          },
           "resumen": {
             "type": "string",
             "title": "Resumen"
@@ -5396,29 +5357,7 @@
             },
             "type": "array",
             "title": "Cadena",
-            "description": "¿Cómo? Reglas que llevaron a la decisión."
-          },
-          "traza_completa": {
-            "items": {
-              "$ref": "#/components/schemas/PasoExplicacion"
-            },
-            "type": "array",
-            "title": "Traza Completa"
-          },
-          "ramas": {
-            "items": {
-              "$ref": "#/components/schemas/RamaExplicada"
-            },
-            "type": "array",
-            "title": "Ramas"
-          },
-          "por_que_no": {
-            "items": {
-              "$ref": "#/components/schemas/RamaExplicada"
-            },
-            "type": "array",
-            "title": "Por Que No",
-            "description": "Qué le faltó a cada autorización no concedida."
+            "description": "¿Cómo? Reglas documentales disparadas, en orden."
           },
           "hechos_iniciales": {
             "items": {
@@ -5471,12 +5410,8 @@
           "id_evaluacion",
           "decision",
           "etiqueta",
-          "rama",
           "resumen",
           "cadena",
-          "traza_completa",
-          "ramas",
-          "por_que_no",
           "hechos_iniciales",
           "hechos_inferidos",
           "no_aplicables",
@@ -7009,49 +6944,6 @@
           "impacto"
         ],
         "title": "PropuestaResultado"
-      },
-      "RamaExplicada": {
-        "properties": {
-          "rama": {
-            "type": "string",
-            "title": "Rama"
-          },
-          "decision": {
-            "type": "string",
-            "title": "Decision"
-          },
-          "aplicada": {
-            "type": "boolean",
-            "title": "Aplicada"
-          },
-          "valor": {
-            "type": "string",
-            "enum": [
-              "VERDADERO",
-              "FALSO",
-              "DESCONOCIDO",
-              "NO_APLICA"
-            ],
-            "title": "Valor"
-          },
-          "faltan": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Faltan"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "rama",
-          "decision",
-          "aplicada",
-          "valor",
-          "faltan"
-        ],
-        "title": "RamaExplicada"
       },
       "RecursoAsignable": {
         "properties": {

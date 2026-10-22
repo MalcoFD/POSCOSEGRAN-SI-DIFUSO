@@ -67,14 +67,13 @@ class Fuente(Base):
 
 
 class Regla(Base):
-    """R01–R30 y las nueve ramas de R30, en la misma tabla."""
+    """Ficha documental de cada regla R01–R52 de una versión."""
 
     __tablename__ = "regla"
 
     id: Mapped[uuid.UUID] = columna_id()
     id_version: Mapped[uuid.UUID] = fk_uuid("version_conocimiento.id", index=True)
-    codigo: Mapped[str] = mapped_column(sa.Text, comment="R01…R30, R30.1…R30.9.")
-    es_rama: Mapped[bool] = mapped_column(sa.Boolean)
+    codigo: Mapped[str] = mapped_column(sa.Text, comment="R01…R52.")
     orden: Mapped[int] = mapped_column(sa.Integer)
     antecedente: Mapped[str] = mapped_column(sa.Text)
     consecuente: Mapped[str] = mapped_column(sa.Text)
@@ -83,5 +82,4 @@ class Regla(Base):
 
     __table_args__ = (
         sa.UniqueConstraint("id_version", "codigo"),
-        sa.UniqueConstraint("id_version", "es_rama", "orden"),
     )

@@ -246,7 +246,6 @@ def proponer(entrada: api.PropuestaEntrada, sesion: SesionDep, identidad: Identi
             casos=[
                 api.CasoAfectado(
                     id=c.id, origen=c.origen, decision_antes=c.decision_antes, decision_despues=c.decision_despues,
-                    rama_antes=c.rama_antes, rama_despues=c.rama_despues,
                     reglas_nuevas=list(c.reglas_nuevas), reglas_retiradas=list(c.reglas_retiradas),
                 )
                 for c in impacto.casos[:100]

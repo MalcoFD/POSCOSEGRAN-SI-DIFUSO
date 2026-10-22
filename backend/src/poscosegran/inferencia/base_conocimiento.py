@@ -3,8 +3,10 @@
 La base se compone de dos documentos versionados juntos:
 
     operativa   knowledge/base_conocimiento.yaml — lo que el motor ejecuta.
-    documental  knowledge/catalogo.yaml — el texto de cada regla transcrito
-                del documento 2.0, que se muestra al usuario.
+    documental  knowledge/catalogo.yaml — el texto de cada regla R01–R52, que
+                se muestra al usuario.
+
+La decisión final es la inferencia Mamdani de la sección `difuso.decision`.
 
 El cargador exige que ambos describan exactamente las mismas reglas, de modo
 que la pantalla de conocimiento nunca muestre una regla distinta de la que se
@@ -145,19 +147,10 @@ class ReglaProduccion:
 
 
 @dataclass(frozen=True, slots=True)
-class Rama:
-    rama: str
-    decision: str
-    si: Mapping[str, Any]
-    mensaje: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
 class Dependencias:
     """Lo que una producción consume y produce, y su lugar en la agenda.
 
-    `posicion` es el índice de la etapa; las ramas de resolución usan una etapa
-    virtual posterior a todas, porque se evalúan una vez alcanzado el punto fijo.
+    `posicion` es el índice de la etapa en que se evalúa la producción.
     """
 
     id: str
@@ -252,7 +245,6 @@ class BaseConocimiento:
     reglas: tuple[ReglaProduccion, ...]
     etapas: tuple[str, ...]
     datos_exigibles: tuple[Mapping[str, Any], ...]
-    resolucion: tuple[Rama, ...]
     decisiones_autorizadas: frozenset[str]
     tabla_tiempo: TablaTiempo
     calculos: Mapping[str, Mapping[str, Any]]
@@ -312,9 +304,6 @@ class BaseConocimiento:
             nodos = [regla.si, regla.aplica_si or {}]
             for campo in set().union(*(campos_de(n, frozenset()) for n in nodos)):
                 uso.setdefault(campo.replace("_aplicable", ""), set()).add(regla.regla)
-        for rama in self.resolucion:
-            for campo in campos_de(rama.si, frozenset()):
-                uso.setdefault(campo.replace("_aplicable", ""), set()).add(rama.rama)
         return {campo: tuple(sorted(reglas)) for campo, reglas in sorted(uso.items())}
 
 
@@ -490,7 +479,6 @@ def _consumos(
 
 def _grafo(
     reglas: Sequence[ReglaProduccion],
-    resolucion: Sequence[Rama],
     definiciones: Mapping[str, Any],
     etapas: Sequence[str],
 ) -> tuple[tuple[Dependencias, ...], list[str]]:
@@ -529,22 +517,6 @@ def _grafo(
                 produce_solicitudes=frozenset(regla.entonces.solicitudes),
             )
         )
-    for rama in resolucion:
-        hechos, negados, solicitudes, sol_negadas = _consumos(rama.si, definiciones)
-        grafo.append(
-            Dependencias(
-                id=rama.rama,
-                etapa="resolucion",
-                posicion=len(etapas),  # después del punto fijo de todas las etapas
-                hechos=hechos,
-                hechos_negados=negados,
-                solicitudes=solicitudes,
-                solicitudes_negadas=sol_negadas,
-                hallazgo=None,
-                produce_solicitudes=frozenset(),
-            )
-        )
-
     # Un hecho con dos productores hace ambigua la etapa en que queda decidido y
     # permitiría que una negación válida hoy dejara de serlo al añadir el segundo.
     productor: dict[str, Dependencias] = {}
@@ -611,13 +583,17 @@ def _grafo(
 
 
 def construir(operativa: Mapping[str, Any], documental: Mapping[str, Any]) -> BaseConocimiento:
-    """Valida y construye la base. Cualquier error invalida la base entera."""
+    """Valida y construye la base. Cualquier error invalida la base entera.
+
+    Las versiones 5.0 almacenadas son inmutables y conservan las claves obsoletas
+    `resolucion` y `ramas_r30`; se ignoran: la decisión la infiere `difuso.decision`.
+    """
     errores: list[str] = []
 
     for clave in (
         "version_base", "version_parametros", "parametros", "definiciones", "etapas",
-        "reglas", "datos_exigibles", "resolucion", "decisiones_autorizadas", "tablas",
-        "fundamentos", "localizadores",
+        "reglas", "datos_exigibles", "decisiones_autorizadas", "tablas",
+        "fundamentos", "localizadores", "difuso",
     ):
         if clave not in operativa:
             errores.append(f"falta la sección '{clave}'")
@@ -735,20 +711,9 @@ def construir(operativa: Mapping[str, Any], documental: Mapping[str, Any]) -> Ba
         if not ({"campos", "pendiente", "pendientes_del_calculo"} & set(exigible)):
             errores.append(f"datos_exigibles[{i}]: no indica qué dato queda pendiente")
 
-    resolucion: list[Rama] = []
-    for i, datos in enumerate(operativa["resolucion"]):
-        if datos.get("decision") not in DECISIONES:
-            errores.append(f"resolucion[{i}]: decisión desconocida '{datos.get('decision')}'")
-        _validar_nodo(datos.get("si"), f"resolucion[{i}]", definiciones, parametros, errores)
-        resolucion.append(
-            Rama(rama=datos["rama"], decision=datos["decision"], si=datos["si"], mensaje=datos.get("mensaje"))
-        )
-    if resolucion and "siempre" not in resolucion[-1].si:
-        errores.append("resolucion: la última rama debe aplicarse siempre, para que toda evaluación concluya")
-    decididas = {rama.decision for rama in resolucion}
-    faltan = sorted(set(DECISIONES) - decididas)
-    if faltan:
-        errores.append(f"resolucion: ninguna rama produce {faltan}")
+    desconocidas = sorted(set(operativa["decisiones_autorizadas"]) - set(DECISIONES))
+    if desconocidas:
+        errores.append(f"decisiones_autorizadas: decisiones desconocidas {desconocidas}")
 
     datos_tabla = operativa["tablas"].get("tiempo_referencia")
     tabla = None
@@ -780,18 +745,16 @@ def construir(operativa: Mapping[str, Any], documental: Mapping[str, Any]) -> Ba
 
     # Coherencia con el documento: mismas reglas, mismas fuentes.
     codigos_documento = {r["id"] for r in documental.get("reglas", [])}
-    if 'difuso' in operativa:
-        from ..dominio.campos import CAMPOS
-        from ..sistema_difuso.validacion import validar
-        errores_difusos = validar(operativa['difuso'], codigos_documento, set(CAMPOS))
-        errores.extend(errores_difusos)
-        if not errores_difusos and 'decision' in operativa['difuso']:
-            for nombre, entrada in operativa['difuso']['decision']['entradas'].items():
-                if 'condicion' in entrada:
-                    _validar_nodo(entrada['condicion'], f'difuso.decision.{nombre}', definiciones, parametros, errores)
-        for modulo in ([] if errores_difusos else operativa['difuso']['modulos']):
-            objetos = [modulo, *modulo.get('entradas', {}).values()]
-            for objeto in objetos:
+    from ..dominio.campos import CAMPOS
+    from ..sistema_difuso.validacion import validar
+    errores_difusos = validar(operativa['difuso'], codigos_documento, set(CAMPOS))
+    errores.extend(errores_difusos)
+    if not errores_difusos:
+        for nombre, entrada in operativa['difuso']['decision']['entradas'].items():
+            if 'condicion' in entrada:
+                _validar_nodo(entrada['condicion'], f'difuso.decision.{nombre}', definiciones, parametros, errores)
+        for modulo in operativa['difuso']['modulos']:
+            for objeto in [modulo, *modulo['entradas'].values()]:
                 for guarda in ('aplica_si', 'valido_si'):
                     if guarda in objeto:
                         _validar_nodo(objeto[guarda], f"difuso.{objeto.get('id')}.{guarda}", definiciones, parametros, errores)
@@ -812,15 +775,8 @@ def construir(operativa: Mapping[str, Any], documental: Mapping[str, Any]) -> Ba
         errores.append(f"reglas operativas sin ficha en el catálogo documental: {sin_ficha}")
     if sin_operativa:
         errores.append(f"fichas documentales sin regla operativa: {sin_operativa}")
-    ramas_documento = [r["id"] for r in documental.get("ramas_r30", [])]
-    ramas_operativas = [r.rama for r in resolucion]
-    if ramas_documento != ramas_operativas:
-        errores.append(
-            f"las ramas R30 del documento {ramas_documento} no coinciden con las operativas "
-            f"{ramas_operativas}"
-        )
     # Orden seguro de dependencias: ninguna negación puede depender del orden del YAML.
-    dependencias, errores_grafo = _grafo(reglas, resolucion, definiciones, etapas)
+    dependencias, errores_grafo = _grafo(reglas, definiciones, etapas)
     errores.extend(errores_grafo)
 
     fuentes_documento = {f["id"] for f in documental.get("fuentes", [])}
@@ -841,7 +797,6 @@ def construir(operativa: Mapping[str, Any], documental: Mapping[str, Any]) -> Ba
         reglas=tuple(reglas),
         etapas=etapas,
         datos_exigibles=tuple(operativa["datos_exigibles"]),
-        resolucion=tuple(resolucion),
         decisiones_autorizadas=frozenset(operativa["decisiones_autorizadas"]),
         tabla_tiempo=tabla,
         calculos=dict(operativa.get("calculos", {})),

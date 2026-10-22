@@ -1,31 +1,25 @@
-"""La evaluación nueva se obtiene del centroide, no del selector determinista."""
+"""La decisión final se obtiene del centroide de la salida Mamdani agregada."""
 import copy
 from dataclasses import replace
 
 import pytest
 
-from casos.base import bul, con, num, sin
-from test_sistema_difuso import completa
+from casos.base import base as completa, bul, con, num, sin
 from poscosegran.dominio.hechos import Fase, Plan
 from poscosegran.dominio.motor import evaluar
-from poscosegran.inferencia.base_conocimiento import cargar, ruta_por_defecto, desde_contenido, BaseInvalida
-from poscosegran.inferencia.motor import Motor
+from poscosegran.inferencia.base_conocimiento import cargar, desde_contenido, BaseInvalida
 
 
 def modelo():
-    return cargar(ruta_por_defecto() / 'difuso')
+    return cargar()
 
 
-def test_no_llama_a_r30_y_decision_coincide_con_centroide(monkeypatch):
-    def prohibido(*args):
-        raise AssertionError('Se invocó el selector histórico')
-    monkeypatch.setattr(Motor, '_resolver', prohibido)
+def test_decision_coincide_con_la_clasificacion_del_centroide():
     base = modelo()
     ids_documentales = {regla['id'] for regla in base.contenido['documental']['reglas']}
     assert len(ids_documentales) == 52
     assert set(base.contenido['operativa']['difuso']['cobertura']) == ids_documentales
     r = evaluar(completa(), base)
-    assert r.rama_r30 == 'MAMDANI_FINAL'
     assert r.version_motor == '3.0.0-mamdani'
     assert r.decision_final == 'AUTORIZAR_ALMACENAMIENTO'
     x = r.difuso['decision']
@@ -97,9 +91,3 @@ def test_adquisicion_rechaza_otros_permisos_incompatibles(antecedente,mensaje):
     contenido['operativa']['difuso']['decision']['reglas'].append({'id':'INSEGURA','si':antecedente,'entonces':'AUTORIZAR_ALMACENAMIENTO'})
     with pytest.raises(BaseInvalida,match=mensaje):
         desde_contenido(contenido)
-
-
-def test_historicos_no_cambian_de_algoritmo():
-    for carpeta,version in [('historico_mamdani_3_1','1.0.0-mamdani'),('historico_mamdani_4_0','2.0.0-mamdani')]:
-        r=evaluar(completa(),cargar(ruta_por_defecto()/carpeta))
-        assert r.version_motor==version and 'decision' not in r.difuso

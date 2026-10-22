@@ -1,6 +1,6 @@
 """Base de conocimiento como datos y módulo de adquisición.
 
-Revisión: 0003_sistema_experto
+Revisión: 0003_conocimiento_como_datos
 Revisión anterior: 0002_inmutabilidad
 
 * version_conocimiento guarda el contenido completo de la base y su ciclo de vida
@@ -20,7 +20,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from poscosegran.db.enums import ESTADO_VERSION, ROL
 
-revision = "0003_sistema_experto"
+revision = "0003_conocimiento_como_datos"
 down_revision = "0002_inmutabilidad"
 branch_labels = None
 depends_on = None

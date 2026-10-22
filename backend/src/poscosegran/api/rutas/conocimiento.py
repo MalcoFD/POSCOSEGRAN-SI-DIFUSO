@@ -27,7 +27,7 @@ def catalogo(sesion: SesionDep, identidad: IdentidadDep) -> api.Catalogo:
         raise RecursoInaccesible("catalogo")
 
     reglas = sesion.scalars(
-        sa.select(Regla).where(Regla.id_version == version.id).order_by(Regla.es_rama, Regla.orden)
+        sa.select(Regla).where(Regla.id_version == version.id).order_by(Regla.orden)
     ).all()
     fuentes = sesion.scalars(
         sa.select(Fuente).where(Fuente.id_version == version.id).order_by(Fuente.codigo)
@@ -58,8 +58,7 @@ def catalogo(sesion: SesionDep, identidad: IdentidadDep) -> api.Catalogo:
         parametros=parametros,
         uso_campos={} if base is None else {c: list(r) for c, r in base.uso_de_campos.items()},
         version_base=version.version_base,
-        reglas=[_regla(f) for f in reglas if not f.es_rama],
-        ramas_r30=[_regla(f) for f in reglas if f.es_rama],
+        reglas=[_regla(f) for f in reglas],
         fuentes=[
             api.Fuente(id=f.codigo, referencia_markdown=f.referencia_markdown) for f in fuentes
         ],

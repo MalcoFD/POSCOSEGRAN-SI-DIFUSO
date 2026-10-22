@@ -71,42 +71,43 @@ def hermetico(inst: Instantanea, **estado: bool) -> Instantanea:
 def test_c01_caso_base_autoriza() -> None:
     resultado = evaluar(base())
     assert resultado.decision_final == "AUTORIZAR_ALMACENAMIENTO"
-    assert resultado.rama_r30 == "R30.8"
     assert resultado.calculos.vida_consumida == Decimal("0.10")
     assert resultado.calculos.vida_proyectada == Decimal("0.20")
 
 
-def test_c02_humedad_trece_es_condicion_base() -> None:
-    resultado = evaluar(con(base(), humedad_grano=num("humedad_grano", "13")))
+def test_c02_humedad_trece_es_base_pero_exige_seguimiento() -> None:
+    """13 % cumple R03, pero en la curva difusa la conservación ya es media: sin plan no se autoriza."""
+    inst = con(base(), humedad_grano=num("humedad_grano", "13"))
+    resultado = evaluar(inst)
     assert "HUMEDAD_APTA_BASE" in {motivo.id.split(":")[1] for motivo in resultado.motivos}
-    assert resultado.decision_final == "AUTORIZAR_ALMACENAMIENTO"
+    assert resultado.decision_final == "CORREGIR_Y_REEVALUAR"
+    assert evaluar(replace(inst, plan=plan_reforzado())).decision_final == "AUTORIZAR_CON_MONITOREO"
 
 
-def test_c03_banda_condicional_con_dictamen_y_plan() -> None:
+def test_c03_banda_condicional_con_dictamen_y_plan_exige_corregir() -> None:
+    """La banda condicional es admisible, pero la conservación conjunta resulta alta."""
     inst = replace(base(), dictamen=dictamen_vigente(), plan=plan_reforzado())
     resultado = evaluar(con(inst, humedad_grano=num("humedad_grano", "13.5")))
-    assert resultado.decision_final == "AUTORIZAR_CON_MONITOREO"
-    assert resultado.rama_r30 == "R30.6"
+    assert "HUMEDAD_CONDICIONAL" in resultado.hechos_inferidos
+    assert resultado.decision_final == "CORREGIR_Y_REEVALUAR"
 
 
 def test_c04_humedad_catorce_no_activa_r01() -> None:
     inst = replace(base(), dictamen=dictamen_vigente(), plan=plan_reforzado())
     resultado = evaluar(con(inst, humedad_grano=num("humedad_grano", "14")))
-    assert resultado.decision_final == "AUTORIZAR_CON_MONITOREO"
+    assert resultado.decision_final == "CORREGIR_Y_REEVALUAR"
     assert "R01" not in resultado.reglas_activadas
 
 
 def test_c05_humedad_sobre_catorce_bloquea_ingreso() -> None:
     resultado = evaluar(con(base(), humedad_grano=num("humedad_grano", "14.01")))
     assert resultado.decision_final == "BLOQUEAR_INGRESO"
-    assert resultado.rama_r30 == "R30.2"
 
 
 def test_c06_misma_humedad_en_seguimiento_retira_lote() -> None:
     inst = replace(base(), fase=Fase.SEGUIMIENTO)
     resultado = evaluar(con(inst, humedad_grano=num("humedad_grano", "14.01")))
     assert resultado.decision_final == "RETIRAR_LOTE"
-    assert resultado.rama_r30 == "R30.3"
 
 
 def test_c07_temperatura_del_grano_alta_exige_correccion() -> None:
@@ -133,7 +134,6 @@ def test_c08_estimacion_indirecta_no_confirma_medicion() -> None:
 def test_c09_falta_verificacion_del_equipo_no_concluye() -> None:
     resultado = evaluar(sin(base(), "equipo_humedad_verificado"))
     assert resultado.decision_final == "SIN_CONCLUSION_AUTOMATICA"
-    assert resultado.rama_r30 == "R30.5"
     assert "R05" not in resultado.reglas_activadas
 
 
@@ -188,7 +188,6 @@ def test_c12_inspeccion_exterior_vencida_exige_correccion() -> None:
 def test_c13_moho_visible_produce_cuarentena() -> None:
     resultado = evaluar(con(base(), moho_visible=bul("moho_visible", True)))
     assert resultado.decision_final == "CUARENTENA"
-    assert resultado.rama_r30 == "R30.1"
 
 
 def test_c14_sospecha_sin_revision_no_confirma_infestacion() -> None:
@@ -424,12 +423,12 @@ def test_c36_material_animal_encadena_hasta_cuarentena() -> None:
     assert "R19" in resultado.reglas_activadas
 
 
-def test_c37_suspension_con_fase_desconocida_corrige() -> None:
+def test_c37_suspension_con_fase_desconocida_no_concluye() -> None:
     inst = replace(base(), fase=None)
     resultado = evaluar(
         con(inst, material_grado_alimentario=bul("material_grado_alimentario", False))
     )
-    assert resultado.decision_final == "CORREGIR_Y_REEVALUAR"
+    assert resultado.decision_final == "SIN_CONCLUSION_AUTOMATICA"
     assert "R23" in resultado.reglas_activadas
 
 
@@ -495,7 +494,6 @@ def _instantanea(nombre: str) -> Instantanea:
 def test_invariante_una_sola_decision(nombre: str) -> None:
     resultado = evaluar(_instantanea(nombre))
     assert resultado.decision_final
-    assert resultado.rama_r30.startswith("R30.")
 
 
 @pytest.mark.parametrize("nombre", CASOS_VARIADOS)

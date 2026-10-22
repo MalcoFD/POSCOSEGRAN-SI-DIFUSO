@@ -1,7 +1,7 @@
 """Estado SUPERADA para la versión de conocimiento reemplazada.
 
 Revisión: 0004_version_superada
-Revisión anterior: 0003_sistema_experto
+Revisión anterior: 0003_conocimiento_como_datos
 
 Hasta ahora, al activar una versión la anterior quedaba en `estado='ACTIVADA'`
 con `activa=false`. Esa combinación se lee como si la versión siguiera vigente y
@@ -22,7 +22,7 @@ from alembic import op
 from poscosegran.db.enums import ESTADO_VERSION
 
 revision = "0004_version_superada"
-down_revision = "0003_sistema_experto"
+down_revision = "0003_conocimiento_como_datos"
 branch_labels = None
 depends_on = None
 

@@ -15,7 +15,7 @@ export default function DecisionMamdani({informe}:{informe:Record<string,unknown
     return `(${(n.todos??n.alguno??[]).map(antecedente).join(n.todos?' Y ':' O ')})`
   }
   return <Panel title="Decisión final mediante Mamdani">
-    <p>Las reglas finales combinan conservación, evidencia y condiciones sanitarias. Se recortan sus consecuentes, se agregan por máximo y se calcula el centroide. La decisión no procede del selector R30 histórico.</p>
+    <p>Las reglas finales combinan conservación, evidencia y condiciones sanitarias. Se recortan sus consecuentes, se agregan por máximo y la acción es la clasificación del centroide.</p>
     <div className="metrics"><div><span>Centroide final</span><strong>{numero(x.centroide)}</strong></div><div><span>Reglas finales</span><strong>{x.reglas.length}</strong></div><div><span>Clasificación</span><strong>{decision(x.decision)}</strong></div></div>
     <svg viewBox="0 0 600 180" role="img" aria-label={`Salida final agregada Mamdani; centroide ${numero(x.centroide)}`} style={{width:'100%',maxHeight:240}}>
       <path d="M40 15V145H565" fill="none" stroke="currentColor" opacity=".35"/>

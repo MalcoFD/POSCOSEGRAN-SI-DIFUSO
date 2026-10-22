@@ -28,7 +28,6 @@ Decision = Literal[
     "AUTORIZAR_CON_MONITOREO",
     "AUTORIZAR_ALMACENAMIENTO",
 ]
-Rama = Literal["MAMDANI_FINAL", "R30.1", "R30.2", "R30.3", "R30.4", "R30.5", "R30.6", "R30.7", "R30.8", "R30.9"]
 UnidadDato = Literal[
     "PCT_BH", "PCT_HR", "PCT_MASA", "CELSIUS", "METROS", "DIAS", "FRACCION", "BOOLEANO", "TEXTO"
 ]
@@ -324,7 +323,6 @@ class Evaluacion(Base):
     fecha_evaluacion: AwareDatetime
     fase: Fase | None
     decision_final: Decision
-    rama_r30: Rama
     motivos: list[Motivo]
     acciones_requeridas: list[Accion]
     datos_pendientes: list[DatoPendiente]
@@ -496,9 +494,8 @@ class Parametro(Base):
 class Catalogo(Base):
     version_base: str
     reglas: list[Regla]
-    ramas_r30: list[Regla]
     fuentes: list[Fuente]
-    # Extensión del contrato (docs/DECISIONES.md, D-SE-3): la base como datos.
+    # Extensión del contrato: la base de conocimiento como datos (ver README).
     version_parametros: str | None = None
     hash_base: str | None = None
     modelo_difuso: dict[str, Any] | None = None
@@ -528,24 +525,12 @@ class PasoExplicacion(Base):
     antecedente: str | None
 
 
-class RamaExplicada(Base):
-    rama: str
-    decision: str
-    aplicada: bool
-    valor: Literal["VERDADERO", "FALSO", "DESCONOCIDO", "NO_APLICA"]
-    faltan: list[str]
-
-
 class Explicacion(Base):
     id_evaluacion: uuid.UUID
     decision: str
     etiqueta: str
-    rama: str
     resumen: str
-    cadena: list[PasoExplicacion] = Field(description="¿Cómo? Reglas que llevaron a la decisión.")
-    traza_completa: list[PasoExplicacion]
-    ramas: list[RamaExplicada]
-    por_que_no: list[RamaExplicada] = Field(description="Qué le faltó a cada autorización no concedida.")
+    cadena: list[PasoExplicacion] = Field(description="¿Cómo? Reglas documentales disparadas, en orden.")
     hechos_iniciales: list[HechoInicial]
     hechos_inferidos: list[str]
     no_aplicables: list[str]
@@ -594,8 +579,6 @@ class CasoAfectado(Base):
     origen: str
     decision_antes: str
     decision_despues: str
-    rama_antes: str
-    rama_despues: str
     reglas_nuevas: list[str]
     reglas_retiradas: list[str]
 

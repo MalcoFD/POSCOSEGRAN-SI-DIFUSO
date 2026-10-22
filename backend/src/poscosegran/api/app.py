@@ -21,7 +21,7 @@ def crear_app() -> FastAPI:
         title="POSCOSEGRAN API",
         version="0.7.0",
         description=(
-            "Sistema experto para condiciones de almacenamiento poscosecha de maíz "
+            "Sistema de inferencia difusa Mamdani para condiciones de almacenamiento poscosecha de maíz "
             "chulpi. Evalúa condiciones de almacenamiento; no certifica inocuidad, "
             "ausencia de micotoxinas ni aptitud para consumo."
         ),

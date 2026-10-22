@@ -34,18 +34,6 @@ DECISION: Final = (
     "AUTORIZAR_CON_MONITOREO",
     "AUTORIZAR_ALMACENAMIENTO",
 )
-RAMA_R30: Final = (
-    "R30.1",
-    "R30.2",
-    "R30.3",
-    "R30.4",
-    "R30.5",
-    "R30.6",
-    "R30.7",
-    "R30.8",
-    "R30.9",
-)
-
 UNIDAD_DATO: Final = (
     "PCT_BH",
     "PCT_HR",

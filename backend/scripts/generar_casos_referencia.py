@@ -4,15 +4,12 @@ Contenido:
   * aceptacion  — las instantáneas que evalúan las pruebas C01–C40.
   * variaciones — casos derivados del caso base, estratificados por decisión.
 
-Para cada caso se congela lo que decidió el sistema experto con la base vigente.
+Para cada caso se congela lo que decidió la inferencia Mamdani con la base vigente.
 Los casos sirven para dos cosas:
   1. Regresión: tests/test_base_conocimiento.py comprueba que el motor y la base
      activa los reproducen exactamente.
   2. Adquisición: al proponer una versión nueva, el módulo de adquisición evalúa
      estos casos con la propuesta y muestra cuáles cambiarían de decisión.
-
-Las variaciones se verificaron, antes de congelarse, contra el motor anterior con
-reglas en código: 48 000 casos sin diferencias (ver docs/ARQUITECTURA_SE.md).
 
 Uso:  python scripts/generar_casos_referencia.py  (requiere pytest instalado)
 Regenerar solo cuando un cambio de la base sea intencional y esté revisado.
@@ -117,7 +114,7 @@ def variar(i):
     return replace(inst, **cambios)
 
 def dirigido(i):
-    """Casos cerca de las ramas R30.6 y R30.7: todo conforme salvo el motivo de monitoreo."""
+    """Casos cerca de la autorización con monitoreo: todo conforme salvo el motivo de seguimiento."""
     inst = replace(base(), plan=rnd.choice([plan_reforzado(), plan_reforzado(), Plan()]))
     eleccion = rnd.choice(["r16", "r28", "hermetico", "condicional"])
     if eleccion == "r16":
@@ -143,7 +140,6 @@ def esperado(inst) -> dict:
     r = evaluar(inst)
     return {
         "decision": r.decision_final,
-        "rama": r.rama_r30,
         "reglas": sorted(r.reglas_activadas),
         "motivos": sorted(m.id for m in r.motivos),
         "pendientes": sorted({p.campo for p in r.datos_pendientes}),

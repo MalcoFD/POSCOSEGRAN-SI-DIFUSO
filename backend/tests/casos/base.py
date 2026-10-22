@@ -3,7 +3,9 @@
 Lote chulpi en INGRESO, no hermético, humedad confirmada 12,5 %, grano y almacén
 a 10 °C, HR 50 %, clima no cálido, listas físicas y sanitarias conformes,
 inspecciones de ingreso completas, sin incidencias, vida previa documentada 0,10,
-plazo restante 20 días y tiempo de referencia 200 días.
+plazo restante 20 días y tiempo de referencia 200 días. Incluye las observaciones
+ampliadas de R31–R52 (infraestructura, estiba, trazabilidad y sustancias), conformes,
+para que la decisión Mamdani disponga de toda la evidencia exigible.
 """
 
 from __future__ import annotations
@@ -13,6 +15,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
+from poscosegran.dominio.campos import CAMPOS
 from poscosegran.dominio.hechos import (
     Controles,
     Fase,
@@ -132,6 +135,13 @@ def datos_base() -> dict[str, Dato]:
     datos["limpieza_tras_operaciones"] = bul("limpieza_tras_operaciones", True)
     datos["polvo_humo_gases_vapores"] = bul("polvo_humo_gases_vapores", False)
     datos["quimicos_combustibles_en_almacen"] = bul("quimicos_combustibles_en_almacen", False)
+
+    # Observaciones ampliadas (R31–R52): conformes, sin hallazgos.
+    conformes = {"identificacion_unidad_legible", "registro_trazabilidad_completo", "programa_control_plagas_documentado"}
+    for campo, definicion in CAMPOS.items():
+        if definicion.paso >= 6 and definicion.tipo == "B":
+            datos[campo] = bul(campo, campo in conformes)
+    datos["distancia_entre_estantes"] = num("distancia_entre_estantes", "1.5", "METROS")
 
     return datos
 

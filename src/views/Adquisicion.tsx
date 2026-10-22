@@ -667,14 +667,8 @@ export default function Adquisicion() {
                               <small>{c.origen}</small>
                               {c.id.split(":").slice(1).join(":")}
                             </td>
-                            <td>
-                              {decision(c.decision_antes)}
-                              <small>{c.rama_antes}</small>
-                            </td>
-                            <td>
-                              {decision(c.decision_despues)}
-                              <small>{c.rama_despues}</small>
-                            </td>
+                            <td>{decision(c.decision_antes)}</td>
+                            <td>{decision(c.decision_despues)}</td>
                             <td>
                               {c.reglas_nuevas
                                 .map((r) => "+" + r)

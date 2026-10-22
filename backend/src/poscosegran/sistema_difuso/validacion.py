@@ -9,17 +9,23 @@ from .reglas import activacion, aplica, referencias
 
 
 def validar(modelo: Any, reglas: set[str], campos: set[str]) -> list[str]:
-    errores: list[str] = []
+    """Núcleo multivariable de conservación y decisión Mamdani final."""
     if not isinstance(modelo, Mapping) or modelo.get('tipo') != 'MAMDANI_TIPO_1':
         return ['difuso: tipo requerido MAMDANI_TIPO_1']
-    if modelo.get('estructura') == 'MULTIVARIABLE':
-        errores = _multivariable(modelo, reglas, campos)
-        if 'decision' in modelo and not errores:
-            from .validacion_decision import validar as validar_decision
-            errores.extend(validar_decision(modelo['decision'], {m['id'] for m in modelo['modulos']}))
-        return errores
-    if modelo.get('estructura') is not None:
-        return ['difuso: estructura desconocida']
+    if modelo.get('estructura') != 'MULTIVARIABLE':
+        return ['difuso: estructura requerida MULTIVARIABLE']
+    if 'decision' not in modelo:
+        return ['difuso: falta la decisión Mamdani final']
+    errores = _multivariable(modelo, reglas, campos)
+    if not errores:
+        from .validacion_decision import validar as validar_decision
+        errores.extend(validar_decision(modelo['decision'], {m['id'] for m in modelo['modulos']}))
+    return errores
+
+
+def _curvas(modelo: Mapping[str, Any], reglas: set[str], campos: set[str]) -> list[str]:
+    """Operadores, consecuentes, cobertura documental y curvas de cada entrada."""
+    errores: list[str] = []
     try:
         if modelo.get('operadores') != {'AND': 'MIN', 'OR': 'MAX', 'implicacion': 'MIN', 'agregacion': 'MAX', 'defuzzificacion': 'CENTROIDE_EXACTO'}:
             errores.append('difuso: operadores no compatibles con esta versión del motor')
@@ -41,18 +47,7 @@ def validar(modelo: Any, reglas: set[str], campos: set[str]) -> list[str]:
             ids.add(ident)
             if modulo['origen'] not in reglas:
                 errores.append(f'difuso.{ident}: regla de origen inexistente')
-            entrada = modulo['entrada']
-            tipo = entrada['tipo']
-            if tipo not in {'dato', 'diferencia', 'calculo'}:
-                errores.append(f'difuso.{ident}: tipo de entrada desconocido')
-            if tipo == 'diferencia' and len(entrada.get('campos', [])) != 2:
-                errores.append(f'difuso.{ident}: una diferencia requiere dos campos')
-            if tipo == 'calculo' and entrada.get('campo') != 'vida_consumida':
-                errores.append(f'difuso.{ident}: cálculo difuso no admitido')
-            if modulo.get('etapa', 'encadenamiento') not in {'encadenamiento', 'tiempo'}:
-                errores.append(f'difuso.{ident}: etapa difusa no admitida')
-            nombres = [entrada['campo']] if tipo == 'dato' else entrada.get('campos', [])
-            if any(c not in campos | {'temperatura_grano_aplicable'} for c in nombres):
+            if modulo['entrada'].get('campo') not in campos:
                 errores.append(f'difuso.{ident}: campo inexistente')
             dominio = modulo['dominio']
             if len(dominio) != 2 or not all(math.isfinite(float(n)) for n in dominio) or dominio[0] >= dominio[1]:
@@ -102,11 +97,7 @@ def _multivariable(modelo: Mapping[str, Any], reglas: set[str], campos: set[str]
         entradas = modulo['entradas']
         if not isinstance(entradas, Mapping) or not 2 <= len(entradas) <= 6:
             return ['difuso: el núcleo requiere de dos a seis entradas']
-        # Reutilizar la validación de curvas, dominios y referencias históricas.
-        plano = dict(modelo)
-        plano.pop('estructura')
-        plano['modulos'] = list(entradas.values())
-        errores.extend(validar(plano, reglas, campos))
+        errores.extend(_curvas({**modelo, 'modulos': list(entradas.values())}, reglas, campos))
         if modulo['origen'] not in reglas or not set(modulo['origenes']) <= reglas:
             errores.append('difuso: orígenes del núcleo inexistentes')
         if not modulo.get('fundamento_transicion'):

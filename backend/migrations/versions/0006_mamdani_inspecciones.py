@@ -1,4 +1,4 @@
-"""Decisión Mamdani e inspecciones compartidas, sin reescribir evaluaciones."""
+"""Inspecciones compartidas de almacén, sin reescribir evaluaciones."""
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
@@ -13,9 +13,6 @@ def upgrade() -> None:
     inspector = sa.inspect(op.get_bind())
     # 0001 usa los modelos actuales en una instalación nueva. En una base anterior
     # estos objetos no existen todavía; ambas rutas deben llegar al mismo esquema.
-    op.execute('ALTER TABLE poscosegran.evaluacion DROP CONSTRAINT ck_evaluacion_rama_r30')
-    op.execute('ALTER TABLE poscosegran.evaluacion ALTER COLUMN rama_r30 TYPE varchar(13)')
-    op.execute("ALTER TABLE poscosegran.evaluacion ADD CONSTRAINT ck_evaluacion_rama_r30 CHECK (rama_r30 IN ('R30.1','R30.2','R30.3','R30.4','R30.5','R30.6','R30.7','R30.8','R30.9','MAMDANI_FINAL'))")
     if not inspector.has_table('inspeccion_almacen', schema='poscosegran'):
         op.create_table('inspeccion_almacen',
             sa.Column('id', sa.Uuid, primary_key=True, server_default=sa.text('gen_random_uuid()')),
@@ -41,11 +38,8 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # El historial no se destruye para forzar una reversión.
-    if op.get_bind().scalar(sa.text("SELECT EXISTS(SELECT 1 FROM poscosegran.inspeccion_almacen) OR EXISTS(SELECT 1 FROM poscosegran.evaluacion WHERE rama_r30='MAMDANI_FINAL')")):
+    if op.get_bind().scalar(sa.text("SELECT EXISTS(SELECT 1 FROM poscosegran.inspeccion_almacen)")):
         raise RuntimeError('La nueva versión tiene historial; no se puede eliminar con downgrade.')
     op.drop_constraint('fk_observacion_id_inspeccion_almacen_inspeccion_almacen', 'observacion', schema='poscosegran', type_='foreignkey')
     op.drop_column('observacion', 'id_inspeccion_almacen', schema='poscosegran')
     op.drop_table('inspeccion_almacen', schema='poscosegran')
-    op.execute('ALTER TABLE poscosegran.evaluacion DROP CONSTRAINT ck_evaluacion_rama_r30')
-    op.execute('ALTER TABLE poscosegran.evaluacion ALTER COLUMN rama_r30 TYPE varchar(5)')
-    op.execute("ALTER TABLE poscosegran.evaluacion ADD CONSTRAINT ck_evaluacion_rama_r30 CHECK (rama_r30 IN ('R30.1','R30.2','R30.3','R30.4','R30.5','R30.6','R30.7','R30.8','R30.9'))")

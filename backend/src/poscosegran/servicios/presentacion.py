@@ -173,7 +173,6 @@ def evaluacion(sesion: Session, fila: Evaluacion) -> api.Evaluacion:
         fecha_evaluacion=fila.fecha_evaluacion,
         fase=fila.fase,
         decision_final=fila.decision_final,
-        rama_r30=fila.rama_r30,
         motivos=motivos,
         acciones_requeridas=acciones,
         datos_pendientes=pendientes,

@@ -1,4 +1,4 @@
-"""Decisión Mamdani: ninguna llamada a la tabla histórica R30."""
+"""Decisión final Mamdani: reglas MF01–MF14, agregación por máximo y centroide."""
 from collections.abc import Mapping
 from typing import Any
 

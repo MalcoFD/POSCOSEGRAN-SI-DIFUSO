@@ -1,6 +1,6 @@
 """Autorización por propiedad y asignación, resuelta contra la base.
 
-Criterios fijados en esta etapa, documentados en docs/SEGURIDAD.md:
+Criterios fijados en esta etapa, documentados en README.md (seguridad):
 - El productor accede a lo suyo: lotes propios y almacenes propios.
 - El técnico accede a lo asignado, por almacén o por lote.
 - ADMINISTRADOR no obtiene competencia técnica ni acceso a datos de producción

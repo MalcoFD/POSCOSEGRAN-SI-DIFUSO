@@ -30,7 +30,7 @@ def test_reutiliza_en_dos_unidades_y_no_en_otro_almacen(api_real):
     otra=post(c,'/unidades',{'id_lote':u['id_lote'],'id_almacen':u['id_almacen'],
                             'nombre_recipiente':'Segunda unidad','tipo_almacenamiento':'NO_HERMETICO'})
     ajena=unidad(c)
-    cargar(Path(__file__).parents[2]/'knowledge/difuso',activar=True,notas='Prueba Mamdani con inspección')
+    cargar(Path(__file__).parents[2]/'knowledge',activar=True,notas='Prueba Mamdani con inspección')
     for x in (u,otra,ajena):
         actual=c.get('/api/v1/unidades/'+x['id']).json()
         r=post(c,f'/unidades/{x["id"]}/evaluaciones',entrada(actual))['evaluacion']
@@ -38,7 +38,6 @@ def test_reutiliza_en_dos_unidades_y_no_en_otro_almacen(api_real):
         assert bool(obs)==(x['id']!=ajena['id'])
         if obs:
             assert obs[0]['entrada']['valor'] is False and obs[0]['procedencia']=='HISTORICA'
-        assert r['rama_r30']=='MAMDANI_FINAL'
         assert not r['decision_final'].startswith('AUTORIZAR')  # la inspección parcial no inventa el resto
     assert i['id_almacen']==u['id_almacen']
 

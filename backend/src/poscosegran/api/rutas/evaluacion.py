@@ -218,7 +218,6 @@ def evaluar(
         revision_resultante=unidad.revision,
         resumen={
             "decision_final": resultado.decision_final,
-            "rama_r30": resultado.rama_r30,
             "reglas_activadas": list(resultado.reglas_activadas),
         },
     )
@@ -307,7 +306,7 @@ def consultar_vigencia(
 
 @enrutador.get("/evaluaciones/{id_evaluacion}/explicacion", response_model=api.Explicacion)
 def explicacion(id_evaluacion: uuid.UUID, sesion: SesionDep, identidad: IdentidadDep) -> api.Explicacion:
-    """Módulo de explicación: ¿cómo se llegó a la decisión y qué faltó para autorizar?
+    """Módulo de explicación: reglas disparadas y centroide Mamdani de la decisión.
 
     Se reproduce la evaluación con los hechos iniciales guardados y la versión exacta
     de la base con que se emitió. El motor es determinista y el reloj forma parte de
@@ -326,7 +325,7 @@ def explicacion(id_evaluacion: uuid.UUID, sesion: SesionDep, identidad: Identida
         )
     base = servicio_conocimiento.base_de(version)
     resultado = motor.evaluar(serializacion.desde_json(hechos), base)
-    if (resultado.decision_final, resultado.rama_r30) != (fila.decision_final, fila.rama_r30):
+    if resultado.decision_final != fila.decision_final:
         raise HTTPException(409, "la evaluación no se reproduce con su versión de la base: revise la integridad del registro")
     e = explicar(resultado, base)
 
@@ -336,19 +335,12 @@ def explicacion(id_evaluacion: uuid.UUID, sesion: SesionDep, identidad: Identida
             solicitudes=list(p.solicitudes), porque=list(p.porque), antecedente=p.antecedente,
         )
 
-    def rama(r) -> api.RamaExplicada:  # type: ignore[no-untyped-def]
-        return api.RamaExplicada(rama=r.rama, decision=r.decision, aplicada=r.aplicada, valor=r.valor, faltan=list(r.faltan))
-
     return api.Explicacion(
         id_evaluacion=fila.id,
         decision=e.decision,
         etiqueta=e.etiqueta,
-        rama=e.rama,
         resumen=e.resumen,
         cadena=[paso(p) for p in e.cadena],
-        traza_completa=[paso(p) for p in e.traza_completa],
-        ramas=[rama(r) for r in e.ramas],
-        por_que_no=[rama(r) for r in e.por_que_no],
         hechos_iniciales=[api.HechoInicial(campo=c, valor=v, procedencia=p) for c, v, p in e.hechos_iniciales],
         hechos_inferidos=list(e.hechos_inferidos),
         no_aplicables=list(e.no_aplicables),

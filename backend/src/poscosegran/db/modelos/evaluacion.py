@@ -23,7 +23,6 @@ from ..enums import (
     FASE,
     FUNDAMENTO_MOTIVO,
     OPERADOR,
-    RAMA_R30,
     RESPONSABLE_REQUERIDO,
     TIPO_ESTIMACION,
     UNIDAD_DATO,
@@ -44,7 +43,6 @@ class Evaluacion(Base):
     )
     fase: Mapped[str | None] = mapped_column(enum_texto("fase", FASE), nullable=True)
     decision_final: Mapped[str] = mapped_column(enum_texto("decision", DECISION))
-    rama_r30: Mapped[str] = mapped_column(enum_texto("rama_r30", (*RAMA_R30, "MAMDANI_FINAL")))
 
     # Entrada efectiva tal como se aplicó, para poder reproducir la inferencia.
     entrada_efectiva: Mapped[dict[str, Any]] = mapped_column(JSONB)

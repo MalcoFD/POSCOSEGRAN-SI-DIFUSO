@@ -1,4 +1,4 @@
-"""Pruebas de la arquitectura de sistema experto.
+"""Pruebas de la base de conocimiento y del motor de inferencia difusa.
 
 Demuestran, con el código y no con la documentación, que:
   * el conocimiento está en la base y no en el motor (separación);
@@ -25,7 +25,7 @@ from poscosegran.dominio.motor import evaluar
 from poscosegran.inferencia import adquisicion, base_conocimiento, serializacion
 from poscosegran.inferencia.base_conocimiento import BaseInvalida, desde_contenido
 from poscosegran.inferencia.explicacion import explicar, por_que_se_pide
-from poscosegran.sistema_experto.motor import Motor
+from poscosegran.sistema_difuso.motor import MotorDifuso as Motor
 
 PAQUETE = Path(base_conocimiento.__file__).parent
 
@@ -50,10 +50,9 @@ def _errores(contenido) -> list[str]:
 
 def test_la_base_del_repositorio_es_valida(activa) -> None:
     assert len(activa.parametros) == 29
-    assert {r.regla for r in activa.reglas if r.regla.startswith("R") and "." not in r.regla} == (
-        {f"R{n:02d}" for n in range(1, 30)} | {f"R{n:02d}" for n in range(31, 53)}
-    )
-    assert [r.rama for r in activa.resolucion] == [f"R30.{n}" for n in range(1, 10)]
+    assert {r.regla for r in activa.reglas if r.regla.startswith("R")} == {f"R{n:02d}" for n in range(1, 53)}
+    assert len(activa.contenido["operativa"]["difuso"]["decision"]["reglas"]) == 14
+    assert "resolucion" not in activa.contenido["operativa"]
 
 
 def test_ninguna_clave_yaml_se_convierte_en_booleano(activa) -> None:
@@ -122,8 +121,8 @@ def test_retirar_una_regla_la_desactiva(activa) -> None:
         (lambda o: o["reglas"][2].update({"si": {"definicion": "inexistente"}}), "definición desconocida"),
         (lambda o: o["reglas"][2].update({"si": {"dato": "humedad_grano", "op": "MAYOR", "valor": 1}}), "comparación desconocido"),
         (lambda o: o["definiciones"]["estiba_apta"].update({"todos": [{"definicion": "estiba_apta"}]}), "ciclo"),
-        (lambda o: o["resolucion"].pop(), "siempre"),
-        (lambda o: o["resolucion"].reverse(), "no coinciden"),
+        (lambda o: o["difuso"].pop("decision"), "falta la decisión Mamdani final"),
+        (lambda o: o["difuso"].update({"estructura": None}), "estructura requerida MULTIVARIABLE"),
         (lambda o: o["parametros"]["vida_alerta"].update({"valor": 1.2}), "restricción incumplida"),
         (lambda o: o["parametros"]["humedad_base_max"].update({"valor": 15}), "restricción incumplida"),
         (lambda o: o["reglas"][2]["entonces"].update({"solicitudes": ["APLAUDIR"]}), "solicitud desconocida"),
@@ -148,7 +147,6 @@ def test_casos_de_referencia_se_reproducen(activa) -> None:
         r = motor.evaluar(inst)
         obtenido = {
             "decision": r.decision_final,
-            "rama": r.rama_r30,
             "reglas": sorted(r.reglas_activadas),
             "motivos": sorted(m.id for m in r.motivos),
             "pendientes": sorted({p.campo for p in r.datos_pendientes}),
@@ -179,11 +177,11 @@ def test_traza_registra_encadenamiento_en_dos_pasadas() -> None:
     assert r.decision_final == "CUARENTENA"
 
 
-def test_resolucion_evalua_todas_las_ramas_pero_decide_una() -> None:
+def test_la_decision_final_es_la_clasificacion_del_centroide() -> None:
     r = evaluar(caso_base())
-    assert [x.rama for x in r.ramas] == [f"R30.{n}" for n in range(1, 10)]
-    assert r.rama_r30 == "R30.8"
-    assert next(x for x in r.ramas if x.rama == "R30.9").valor == "VERDADERO"
+    informe = r.difuso["decision"]
+    assert r.decision_final == informe["decision"] == "AUTORIZAR_ALMACENAMIENTO"
+    assert r.decision_final == next(c["decision"] for c in informe["clasificacion"] if informe["centroide"] < c["hasta"])
 
 
 # --- Explicación ------------------------------------------------------------------------
@@ -193,26 +191,27 @@ def test_explicacion_como(activa) -> None:
     from casos.base import bul
 
     e = explicar(evaluar(con(caso_base(), moho_visible=bul("moho_visible", True))), activa)
-    assert [p.regla for p in e.cadena] == ["R18", "R19"]
-    assert e.cadena[0].porque == ("moho visible",)
-    assert "R19" in e.resumen
+    reglas = [p.regla for p in e.cadena]
+    assert reglas.index("R18") < reglas.index("R19")
+    assert next(p for p in e.cadena if p.regla == "R18").porque == ("moho visible",)
+    assert "centroide final" in e.resumen
     assert e.etiqueta == "Separar y solicitar evaluación técnica"
 
 
-def test_explicacion_por_que_no(activa) -> None:
+def test_explicacion_de_evidencia_pendiente(activa) -> None:
     inst = con(caso_base(), equipo_humedad_verificado=desconocido("equipo_humedad_verificado"))
-    e = explicar(evaluar(inst), activa)
+    r = evaluar(inst)
+    e = explicar(r, activa)
     assert e.decision == "SIN_CONCLUSION_AUTOMATICA"
-    r308 = next(r for r in e.por_que_no if r.rama == "R30.8")
-    assert any("equipo verificado (desconocido)" in f for f in r308.faltan)
+    assert e.etiqueta == "Faltan datos o revisión"
+    assert "equipo_humedad_verificado" in {p.campo for p in r.datos_pendientes}
 
 
 def test_explicacion_de_autorizacion(activa) -> None:
     e = explicar(evaluar(caso_base()), activa)
     assert e.decision == "AUTORIZAR_ALMACENAMIENTO"
-    assert "se cumplieron todas sus condiciones" in e.resumen
+    assert e.resumen.startswith("Mamdani calculó el centroide final")
     assert {"R03", "R06"} <= {p.regla for p in e.cadena}
-    assert e.por_que_no == ()
 
 
 def test_por_que_se_pide(activa) -> None:
@@ -266,7 +265,9 @@ def test_propuesta_incoherente_se_rechaza(activa, pocos_casos) -> None:
 
 
 def test_propuesta_que_relaja_advierte(activa) -> None:
-    inst = con(caso_base(), hr_almacen=num("hr_almacen", "62", "PCT_HR"))
+    from casos.test_aceptacion import plan_reforzado
+
+    inst = con(replace(caso_base(), plan=plan_reforzado()), hr_almacen=num("hr_almacen", "62", "PCT_HR"))
     assert evaluar(inst).decision_final == "CORREGIR_Y_REEVALUAR"
     p = adquisicion.proponer(activa, motivo="Relajar HR del almacén para zonas altoandinas", version_parametros="1.1",
                              parametros={"hr_almacen_max": 65}, casos=[("manual:hr62", "manual", inst)])
@@ -284,7 +285,7 @@ def test_propuesta_de_regla_exige_version_de_base(activa, pocos_casos) -> None:
                              reglas={"R26": r26}, casos=pocos_casos)
     assert any("nueva versión de la base" in e for e in p.errores)
     p = adquisicion.proponer(activa, motivo="Contaminantes químicos suspenden el almacenamiento",
-                             version_base="2.1", reglas={"R26": r26}, casos=pocos_casos)
+                             version_base="5.2", reglas={"R26": r26}, casos=pocos_casos)
     assert p.valida, p.errores
     assert p.cambios_reglas[0].tipo == "MODIFICADA"
 
@@ -378,14 +379,6 @@ def test_detecta_la_negacion_indirecta_a_traves_de_una_definicion(activa) -> Non
     assert any("la misma etapa" in e for e in _errores(contenido)), _errores(contenido)
 
 
-def test_las_ramas_r30_pueden_negar_hechos_de_cualquier_etapa(activa) -> None:
-    """Se evalúan tras el punto fijo, así que ninguna negación suya depende del orden."""
-    ramas = [d for d in activa.dependencias if d.etapa == "resolucion"]
-    assert [d.id for d in ramas] == [f"R30.{n}" for n in range(1, 10)]
-    assert all(d.posicion == len(activa.etapas) for d in ramas)
-    assert any(d.hechos_negados for d in ramas)
-
-
 # --- Propiedades del ciclo de inferencia --------------------------------------------
 
 
@@ -410,7 +403,7 @@ def test_la_evaluacion_es_determinista(activa) -> None:
     motor = Motor(activa)
     primero, segundo = motor.evaluar(inst), motor.evaluar(inst)
     assert primero.decision_final == segundo.decision_final
-    assert primero.rama_r30 == segundo.rama_r30
+    assert primero.difuso == segundo.difuso
     assert primero.reglas_activadas == segundo.reglas_activadas
     assert [(a.orden, a.produccion, a.pasada) for a in primero.traza] == [
         (a.orden, a.produccion, a.pasada) for a in segundo.traza
@@ -418,7 +411,7 @@ def test_la_evaluacion_es_determinista(activa) -> None:
 
 
 def test_cadena_de_tres_producciones_hasta_la_decision(activa) -> None:
-    """R20 afirma un hecho, R19 lo consume y pide cuarentena, y R30.1 decide con esa solicitud."""
+    """R20 afirma un hecho, R19 lo consume y pide cuarentena, y Mamdani concluye CUARENTENA."""
     from casos.base import bul
 
     resultado = Motor(activa).evaluar(
@@ -428,18 +421,18 @@ def test_cadena_de_tres_producciones_hasta_la_decision(activa) -> None:
     assert pasos["R20"].hallazgo == "CONTAMINACION_ANIMAL_OBSERVADA"
     assert "CONTAMINACION_ANIMAL_OBSERVADA" in pasos["R19"].soportes
     assert "CUARENTENA_SOLICITADA" in pasos["R19"].solicitudes
-    assert resultado.rama_r30 == "R30.1"
     assert resultado.decision_final == "CUARENTENA"
+    finales = resultado.difuso["decision"]["reglas"]
+    assert next(r for r in finales if r["id"] == "MF01")["alfa"] == 1
 
     # La misma cadena, leída del grafo y no de una ejecución concreta.
     grafo = {d.id: d for d in activa.dependencias}
     assert grafo["R20"].hallazgo in grafo["R19"].hechos
     assert "CUARENTENA" in grafo["R19"].produce_solicitudes
-    assert "CUARENTENA" in grafo["R30.1"].solicitudes
 
 
 def test_el_hash_de_los_casos_de_referencia_coincide_con_la_base(activa) -> None:
-    """Si la base cambia, los 242 casos deben revisarse y regenerarse, no ignorarse."""
+    """Si la base cambia, los casos de referencia deben revisarse y regenerarse, no ignorarse."""
     ruta = base_conocimiento.ruta_por_defecto() / "casos_referencia.json"
     contenido = json.loads(ruta.read_text(encoding="utf-8"))
     assert contenido["hash_base"] == activa.hash, (

@@ -25,10 +25,10 @@ export default function Conocimiento() {
   const modelo = leerModelo(data.data?.modelo_difuso)
   const vista: Modo = modelo ? modo : 'tecnica'
   const texto = q.toLowerCase()
-  const reglas = data.data ? [...data.data.reglas, ...data.data.ramas_r30].filter(r => JSON.stringify(r).toLowerCase().includes(texto)) : []
+  const reglas = data.data ? data.data.reglas.filter(r => JSON.stringify(r).toLowerCase().includes(texto)) : []
   return <div className="stack">
     <PageHeader eyebrow={`Conocimiento documentado · Base ${data.data?.version_base ?? '—'} · parámetros ${data.data?.version_parametros ?? '—'}`} title="Base de conocimiento"
-      description={`${modelo ? 'Sistema difuso Mamdani. ' : 'Sistema experto histórico. '}El motor no contiene umbrales ni reglas: los lee de esta base. Lo que ves aquí es exactamente lo que se aplica.`}
+      description="Sistema de inferencia difusa Mamdani. El motor no contiene umbrales ni reglas: los lee de esta base. Lo que ves aquí es exactamente lo que se aplica."
       actions={modelo && <div className="segmented" role="tablist" aria-label="Modo de lectura">
         <button role="tab" aria-selected={vista === 'guiada'} onClick={() => setModo('guiada')}><IconHelp size={16} />Vista guiada</button>
         <button role="tab" aria-selected={vista === 'tecnica'} onClick={() => setModo('tecnica')}><IconCode size={16} />Vista técnica</button>

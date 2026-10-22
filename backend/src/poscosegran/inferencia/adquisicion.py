@@ -55,8 +55,6 @@ class CasoAfectado:
     origen: str
     decision_antes: str
     decision_despues: str
-    rama_antes: str
-    rama_despues: str
     reglas_nuevas: tuple[str, ...]
     reglas_retiradas: tuple[str, ...]
 
@@ -252,7 +250,7 @@ def medir_impacto(
         evaluados += 1
         antes, despues = evaluar(inst, activa), evaluar(inst, propuesta)
         reglas_antes, reglas_despues = set(antes.reglas_activadas), set(despues.reglas_activadas)
-        if (antes.decision_final, antes.rama_r30) == (despues.decision_final, despues.rama_r30) and reglas_antes == reglas_despues:
+        if antes.decision_final == despues.decision_final and reglas_antes == reglas_despues:
             continue
         if antes.decision_final != despues.decision_final:
             clave = f"{antes.decision_final} → {despues.decision_final}"
@@ -265,8 +263,6 @@ def medir_impacto(
                 origen=origen,
                 decision_antes=antes.decision_final,
                 decision_despues=despues.decision_final,
-                rama_antes=antes.rama_r30,
-                rama_despues=despues.rama_r30,
                 reglas_nuevas=tuple(sorted(reglas_despues - reglas_antes)),
                 reglas_retiradas=tuple(sorted(reglas_antes - reglas_despues)),
             )
