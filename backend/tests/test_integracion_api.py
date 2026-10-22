@@ -25,13 +25,15 @@ def unidad(client):
                          "nombre_recipiente": "Costal 1", "tipo_almacenamiento": "NO_HERMETICO"})
 
 
-def entrada(unidad, campos=None):
+def entrada(unidad, campos=None, ampliadas=True):
     from casos.base import datos_base
     from poscosegran.dominio.campos import CAMPOS
     now = datetime.now(UTC) - timedelta(seconds=1)
     observations = []
     for campo, dato in datos_base().items():
-        if campo not in CAMPOS:
+        # Sin `ampliadas`, solo la captura básica (pasos 1–5): las observaciones
+        # R31–R52 quedan pendientes o llegan de una inspección de almacén.
+        if campo not in CAMPOS or (not ampliadas and CAMPOS[campo].paso >= 6):
             continue
         valor = dato.valor
         if isinstance(valor, datetime):
@@ -58,6 +60,13 @@ def entrada(unidad, campos=None):
             "historial": {"fecha_inicio_historial": now.isoformat(), "vida_previa_documentada": 0.1,
                           "evidencia_vida_previa": "Registro anterior", "intervalos_historial": []},
             "dias_previstos_restantes": 20, "fecha_salida_prevista": (now + timedelta(days=20)).isoformat()}
+
+
+def agregar(body, *observaciones):
+    """Añade observaciones al cuerpo sustituyendo la del mismo campo: la API rechaza duplicados."""
+    nuevos = {o["campo"] for o in observaciones}
+    body["observaciones"] = [o for o in body["observaciones"] if o["campo"] not in nuevos] + list(observaciones)
+    return body
 
 
 def test_errores_y_permiso(api_real):

@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from test_integracion_api import entrada, post, unidad
+from test_integracion_api import agregar, entrada, post, unidad
 
 
 def observacion(campo, valor):
@@ -22,7 +22,7 @@ def test_cuarentena_nueva_persiste_y_no_la_cierra_una_medicion(api_real, campos)
     c, _, _ = api_real
     u = unidad(c)
     body = entrada(u)
-    body['observaciones'] += [observacion(k, True) for k in campos]
+    agregar(body, *[observacion(k, True) for k in campos])
     r = post(c, f'/unidades/{u["id"]}/evaluaciones', body)
     assert r['evaluacion']['decision_final'] == 'CUARENTENA'
     episodios = c.get(f'/api/v1/unidades/{u["id"]}/incidencias').json()['items']
@@ -31,7 +31,7 @@ def test_cuarentena_nueva_persiste_y_no_la_cierra_una_medicion(api_real, campos)
         assert set(episodios[0]['causas']) == {'R50', 'R51'}
     u = c.get('/api/v1/unidades/' + u['id']).json()
     body = entrada(u)
-    body['observaciones'] += [observacion(k, False) for k in campos]
+    agregar(body, *[observacion(k, False) for k in campos])
     r = post(c, f'/unidades/{u["id"]}/evaluaciones', body)
     assert r['evaluacion']['decision_final'] == 'CUARENTENA'
     assert r['vigencia']['estado'] != 'VIGENTE'
@@ -98,7 +98,7 @@ def test_autorizacion_difusa_ordinaria_y_seguimiento_real(api_real):
                 continue
             o = observacion(k, d.valor if isinstance(d.valor, bool) else float(d.valor))
             o['unidad'] = CAMPOS[k].unidad
-            body['observaciones'].append(o)
+            agregar(body, o)
         return body
 
     r = post(c, f'/unidades/{u["id"]}/evaluaciones', completa_entrada(u, 10))

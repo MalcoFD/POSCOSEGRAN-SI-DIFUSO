@@ -7,7 +7,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from test_integracion_api import unidad, entrada, post
+from test_integracion_api import agregar, unidad, entrada, post
 from test_regresiones_diagnostico import observacion
 from poscosegran.conocimiento.cargar import cargar
 from poscosegran.db.modelos import Almacen, Evento
@@ -33,7 +33,7 @@ def test_reutiliza_en_dos_unidades_y_no_en_otro_almacen(api_real):
     cargar(Path(__file__).parents[2]/'knowledge',activar=True,notas='Prueba Mamdani con inspección')
     for x in (u,otra,ajena):
         actual=c.get('/api/v1/unidades/'+x['id']).json()
-        r=post(c,f'/unidades/{x["id"]}/evaluaciones',entrada(actual))['evaluacion']
+        r=post(c,f'/unidades/{x["id"]}/evaluaciones',entrada(actual,ampliadas=False))['evaluacion']
         obs=[o for o in r['observaciones_aplicadas'] if o['entrada']['campo']=='filtracion_agua_almacen']
         assert bool(obs)==(x['id']!=ajena['id'])
         if obs:
@@ -50,7 +50,7 @@ def test_declaracion_actual_desconocida_no_se_reemplaza_por_inspeccion(api_real)
     body=entrada(u)
     o=observacion('filtracion_agua_almacen',False)
     o.update(captura='DESCONOCIDO',valor=None,fecha_observacion=None,metodo=None)
-    body['observaciones'].append(o)
+    agregar(body,o)
     e=post(c,f'/unidades/{u["id"]}/evaluaciones',body)['evaluacion']
     obs=next(o for o in e['observaciones_aplicadas'] if o['entrada']['campo']=='filtracion_agua_almacen')
     assert obs['estado_dato']=='DESCONOCIDO' and obs['procedencia']=='ACTUAL'
