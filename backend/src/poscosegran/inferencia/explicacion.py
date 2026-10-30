@@ -18,6 +18,7 @@ from .base_hechos import Activacion
 from .motor import Resultado
 
 ETIQUETA_DECISION = {
+    "SUSPENDER_ALMACENAMIENTO": "Suspender almacenamiento en las condiciones actuales",
     "CUARENTENA": "Separar y solicitar evaluación técnica",
     "BLOQUEAR_INGRESO": "Ingreso no autorizado",
     "RETIRAR_LOTE": "Suspender almacenamiento en las condiciones actuales",
@@ -71,9 +72,18 @@ def _paso(activacion: Activacion, antecedentes: Mapping[str, str]) -> Paso:
 def explicar(resultado: Resultado, base: BaseConocimiento) -> Explicacion:
     informe = (resultado.difuso or {})["decision"]
     etiqueta = ETIQUETA_DECISION[resultado.decision_final]
-    resumen = (f"Mamdani calculó el centroide final {informe['centroide']:.3f} y lo clasificó como "
-               f"{etiqueta}. Las condiciones críticas y la suficiencia de evidencia participan en los "
-               "antecedentes de las reglas finales.")
+    indice = informe["centroide"]
+    resumen = (
+        (
+            f"La matriz {informe['matriz']} evaluó {len(informe['reglas'])} reglas; "
+            f"{len(resultado.reglas_activadas)} tuvieron activación positiva. "
+            f"El centroide {indice:.3f} corresponde a: {etiqueta}."
+        )
+        if indice is not None
+        else (
+            "No se calculó un índice: completar o corregir las entradas indicadas. No se sustituyen datos desconocidos por condiciones favorables."
+        )
+    )
     antecedentes = _antecedentes(base)
     return Explicacion(
         decision=resultado.decision_final,

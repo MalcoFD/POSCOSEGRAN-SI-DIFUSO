@@ -56,7 +56,7 @@ export default function Sidebar({ activeView, onNavigate, collapsed, onToggle, r
           ))}
       </nav>
 
-      {!collapsed && <div className="sidebar-foot">Sistema difuso Mamdani · Prototipo académico</div>}
+      {!collapsed && <div className="sidebar-foot">Sistema difuso Mamdani</div>}
 
       <button className="sidebar-toggle" onClick={onToggle} aria-label={collapsed ? 'Expandir menú' : 'Colapsar menú'} aria-expanded={!collapsed} title={collapsed ? 'Expandir menú' : 'Colapsar menú'}>
         {collapsed ? <IconChevronRight size={16} /> : <IconChevronLeft size={16} />}

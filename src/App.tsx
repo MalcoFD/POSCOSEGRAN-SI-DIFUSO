@@ -69,7 +69,7 @@ function Shell() {
     {!collapsed && esMovil() && <button className="sidebar-backdrop" aria-label="Cerrar menú" onClick={() => setCollapsed(true)} />}
     <div className="app-content" style={{ marginLeft: collapsed ? 64 : 240 }}>
       <header className="topbar">
-        <span className="muted desktop-only" style={{ fontSize: 14 }}>Sistema de gestión poscosecha</span>
+        <span className="muted desktop-only" style={{ fontSize: 14 }}>Sistema difuso Mamdani para la gestión poscosecha</span>
         <div className="topbar-user">
           {sincronizando && !perfil.isLoading && <span className="sync-dot" title="Actualizando datos"><span className="sr-only">Actualizando datos</span></span>}
           {perfil.isLoading ? <><Skeleton className="sk-circle" width={36} height={36} /><div><Skeleton width={110} height={12} /><Skeleton width={64} height={10} /></div></> : <>

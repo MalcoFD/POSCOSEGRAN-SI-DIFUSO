@@ -55,7 +55,7 @@ def calcular(sesion: Session, id_unidad: uuid.UUID) -> Vigencia:
 
         )
     ).all()
-    causas.extend(f"Incidencia {tipo} abierta después de la evaluación." for tipo in abiertas)
+    causas.extend(f"Incidencia {tipo} pendiente de resolución técnica." for tipo in abiertas)
 
     eventos = sesion.scalars(
         sa.select(Evento.tipo).where(

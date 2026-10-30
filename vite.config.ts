@@ -12,6 +12,8 @@ export default defineConfig({
     },
   },
   server: {
+    // Office mantiene temporales bloqueados al renderizar los entregables.
+    watch: { ignored: ['**/tmp/**', '**/docs/**', '**/test-results/**', '**/backend/.venv/**'] },
     host: process.env.HOST || '0.0.0.0',
     port: Number(process.env.PORT || 8443),
     strictPort: true,

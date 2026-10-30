@@ -1,141 +1,293 @@
-"""Mamdani integrado en la agenda: núcleo de conservación y decisión final.
+"""Inferencia Mamdani directa: una matriz por modalidad y un único centroide."""
 
-Las reglas documentales encadenan hechos y solicitudes. En su etapa, el núcleo
-multivariable fuzzifica las mediciones y calcula el centroide de conservación;
-tras el punto fijo, la decisión final se infiere con las reglas MF01–MF14.
-"""
-from collections.abc import Mapping
+from __future__ import annotations
+from datetime import datetime, timedelta
+import math
 from typing import Any
-
-from ..dominio.hechos import Accion, Motivo, Pendiente
-from ..dominio.valores import F, V, Tri
-from ..inferencia.base_hechos import BaseHechos
-from ..inferencia.lenguaje import Evaluador
-from ..inferencia.motor import Motor
+from ..dominio.hechos import Accion, Instantanea, Motivo, Pendiente
+from ..dominio.valores import D, F, V
+from ..inferencia.base_conocimiento import BaseConocimiento
+from ..inferencia.base_hechos import Activacion
+from ..inferencia.calculos import CalculosTiempo
+from ..inferencia.motor import Resultado
 from .defuzzificacion import centroide
 from .pertenencia import pertenencia
-from .reglas import activacion, referencias
+from .reglas import activacion
 
-VERSION_MOTOR = '3.0.0-mamdani'
-
-
-class EvaluadorDifuso(Evaluador):
-    def definicion(self, nombre: str) -> Tri:
-        resultado = super().definicion(nombre)
-        if nombre == 'riesgo_activo' and resultado is F and self.hechos.difuso:
-            if any(m.get('solicitud') for m in self.hechos.difuso['modulos']):
-                return V
-        return resultado
+VERSION_MOTOR = "4.0.0-matricial"
 
 
-class MotorDifuso(Motor):
+class MotorDifuso:
     version = VERSION_MOTOR
 
-    def crear_evaluador(self, hechos: BaseHechos) -> Evaluador:
-        return EvaluadorDifuso(self.base, hechos, calculadora=None)
+    def __init__(self, base: BaseConocimiento) -> None:
+        self.base = base
 
-    def completar_etapa(self, etapa: str, hechos: BaseHechos, evaluador: Evaluador) -> None:
-        modelo = self.base.contenido['operativa']['difuso']
-        if hechos.difuso is None:
-            hechos.difuso = {
-                'tipo': modelo['tipo'], 'version': self.version, 'operadores': modelo['operadores'],
-                'politica': modelo['politica'], 'modulos': [],
-                'nota': 'Índices del prototipo, no probabilidades ni certificación de inocuidad.',
-            }
-        for modulo in modelo['modulos']:
-            if modulo.get('etapa', 'encadenamiento') == etapa:
-                hechos.difuso['modulos'].append(self._conjunto(modulo, modelo, hechos, evaluador))
-
-    def _resolver(self, hechos: BaseHechos, evaluador: Evaluador) -> str:
-        from .decision import inferir
-        informe = inferir(self.base.contenido['operativa']['difuso']['decision'], hechos, evaluador)
-        assert hechos.difuso is not None
-        hechos.difuso['decision'] = informe
-        decision: str = informe['decision']
-        mensaje = f"Decisión Mamdani {decision}: centroide final {informe['centroide']:.3f}; clasificación de la salida agregada."
-        hechos.motivos.append(Motivo(id='R30:MAMDANI_FINAL', regla='R30', mensaje=mensaje,
-                                     fuentes=self.base.fuentes_de('R30'), fundamento='POLITICA_PROTOTIPO'))
-        if decision in {'CORREGIR_Y_REEVALUAR', 'AUTORIZAR_CON_MONITOREO'}:
-            hechos.acciones.append(Accion(codigo='CORREGIR' if decision == 'CORREGIR_Y_REEVALUAR' else 'MONITOREAR',
-                                          descripcion=mensaje, responsable_requerido='PRODUCTOR'))
-        # El plan y el control responden a la decisión ya inferida; no la eligen.
-        if decision == 'AUTORIZAR_CON_MONITOREO':
-            hechos.solicitar('MONITOREO', 'R30')
-        return decision
-
-    def _entrada(self, entrada: Mapping[str, Any], hechos: BaseHechos, evaluador: Evaluador) -> dict[str, Any]:
-        traza: dict[str, Any] = {
-            'id': entrada['id'], 'nombre': entrada['nombre'], 'origen': entrada['origen'],
-            'unidad': entrada['unidad'], 'estado': 'DESCONOCIDO', 'valor': None,
-            'pertenencias': {}, 'conjuntos': entrada['conjuntos'], 'dominio': entrada['dominio'],
-            'fuentes': list(self.base.fuentes_de(entrada['origen'])),
-            'fundamento_transicion': entrada['fundamento_transicion'],
-        }
-        aplicable = evaluador.evaluar(entrada.get('aplica_si', {'siempre': True})).valor
-        if aplicable is not V:
-            traza['estado'] = 'NO_APLICA' if aplicable is F else 'CONTEXTO_PENDIENTE'
-            return traza
-        if evaluador.evaluar(entrada.get('valido_si', {'siempre': True})).valor is not V:
-            return traza
-        n = hechos.dato(entrada['entrada']['campo']).numero
-        if n is None:
-            return traza
-        valor = float(n)
-        traza['valor'] = valor
-        minimo, maximo = entrada['dominio']
-        if not minimo <= valor <= maximo:
-            traza['estado'] = 'FUERA_DE_DOMINIO'
-            return traza
-        traza['pertenencias'] = {nombre: pertenencia(valor, puntos) for nombre, puntos in entrada['conjuntos'].items()}
-        traza['estado'] = 'CALCULADO'
-        return traza
-
-    def _conjunto(
-        self, modulo: Mapping[str, Any], modelo: Mapping[str, Any],
-        hechos: BaseHechos, evaluador: Evaluador,
-    ) -> dict[str, Any]:
-        entradas = {k: self._entrada(e, hechos, evaluador) for k, e in modulo['entradas'].items()}
-        traza: dict[str, Any] = {
-            'id': modulo['id'], 'nombre': modulo['nombre'], 'origen': modulo['origen'],
-            'origenes': modulo['origenes'], 'estado': 'DESCONOCIDO', 'entradas': entradas,
-            'reglas': [], 'centroide': None, 'area': None, 'curva': [], 'solicitud': None,
-            'fundamento_transicion': modulo['fundamento_transicion'],
-        }
-        if any(e['estado'] not in {'CALCULADO', 'NO_APLICA'} for e in entradas.values()):
-            return traza
-        grados = {k: e['pertenencias'] for k, e in entradas.items() if e['estado'] == 'CALCULADO'}
-        for regla in modulo['reglas']:
-            habilitada = evaluador.evaluar(regla.get('aplica_si', {'siempre': True})).valor is V
-            alfa = activacion(regla['si'], grados) if habilitada else 0.0
-            traza['reglas'].append({
-                'id': regla['id'], 'antecedente': regla['si'], 'alfa': alfa,
-                'estado': 'EVALUADA' if habilitada else 'NO_APLICA',
-                'consecuente': regla['entonces'], 'puntos_salida': modelo['salidas'][regla['entonces']],
-                'soportes': sorted({k for k, _ in referencias(regla['si'])}),
-            })
-        calculo = centroide([(r['puntos_salida'], r['alfa']) for r in traza['reglas']])
-        if calculo is None:
-            traza['estado'] = 'SIN_COBERTURA'
-            return traza
-        indice, area, curva = calculo
-        politica = modelo['politica']
-        solicitud = 'CORRECCION' if indice >= politica['correccion_desde'] else (
-            'MONITOREO' if indice >= politica['monitoreo_desde'] else None
+    def evaluar(self, instantanea: Instantanea) -> Resultado:
+        modelo = self.base.contenido["operativa"]["difuso"]
+        modalidad = (
+            instantanea.tipo_almacenamiento.value if instantanea.tipo_almacenamiento else None
         )
-        traza.update(estado='CALCULADO', centroide=indice, area=area, curva=curva, solicitud=solicitud)
-        return traza
-
-    def _pendientes(self, hechos: BaseHechos, evaluador: Evaluador, calculadora: Any) -> list[Pendiente]:
-        pendientes = [Pendiente(p.campo, p.motivo, 2 if p.campo == 'granos_defectuosos' else p.paso)
-                      for p in super()._pendientes(hechos, evaluador, calculadora)]
-        # La indisponibilidad participa en la decisión Mamdani, para que sus reglas y
-        # su explicación coincidan con la decisión; no se modifica después.
-        for modulo in (hechos.difuso or {}).get('modulos', []):
-            for entrada in modulo['entradas'].values():
-                if entrada['estado'] not in {'CALCULADO', 'NO_APLICA'}:
-                    campo = entrada['id']
-                    if not any(p.campo == campo for p in pendientes):
-                        pendientes.append(Pendiente(campo, 'Entrada requerida por el núcleo Mamdani; verificar medición, método y dominio.', 2))
-            if modulo['estado'] in {'SIN_COBERTURA', 'FUERA_DE_DOMINIO'}:
-                pendientes.append(Pendiente(modulo['id'], 'Módulo Mamdani fuera del dominio o sin cobertura; revisar modelo y observación.', 2))
-        return pendientes
+        matriz = modelo["matrices"].get(modalidad)
+        pendientes: list[Pendiente] = []
+        entradas: dict[str, Any] = {}
+        grados: dict[str, dict[str, float]] = {}
+        if matriz is None:
+            pendientes.append(
+                Pendiente("tipo_almacenamiento", "Seleccionar una modalidad de almacenamiento.", 1)
+            )
+        aplicables = matriz["entradas"] if matriz else []
+        vigencia_horas = modelo["politica"]["vigencia_medicion_horas"]
+        for campo, definicion in modelo["entradas"].items():
+            dato = instantanea.datos[campo]
+            valor: Any = (
+                dato.texto
+                if definicion["tipo"] == "CATEGORICA"
+                else (float(dato.numero) if dato.numero is not None else None)
+            )
+            estado = "CALCULADO"
+            mu: dict[str, float] = {}
+            motivo = ""
+            if campo not in aplicables:
+                estado = "NO_APLICA"
+            elif not dato.utilizable or valor is None:
+                estado, motivo = (
+                    "DESCONOCIDO",
+                    "Aportar un dato válido; desconocido no equivale a cero.",
+                )
+            elif dato.fecha_observacion is None or not dato.metodo:
+                estado, motivo = "INVALIDO", "Registrar fecha y método de la observación."
+            elif dato.fecha_observacion > instantanea.fecha_evaluacion:
+                estado, motivo = (
+                    "INVALIDO",
+                    "La observación no puede ser posterior a la evaluación.",
+                )
+            elif (
+                instantanea.fecha_evaluacion - dato.fecha_observacion
+            ).total_seconds() > vigencia_horas * 3600:
+                estado, motivo = (
+                    "VENCIDO",
+                    "La observación supera la ventana documentada de siete días; actualizarla.",
+                )
+            elif definicion["tipo"] == "CATEGORICA":
+                if valor not in definicion["conjuntos"]:
+                    estado, motivo = (
+                        "INVALIDO",
+                        "Seleccionar uno de los cuatro estados del protocolo.",
+                    )
+                elif not (dato.evidencia or "").strip():
+                    estado, motivo = (
+                        "INVALIDO",
+                        "Describir la inspección, muestra y hallazgos; también cuando no se observen anomalías.",
+                    )
+                else:
+                    mu = {k: float(k == valor) for k in definicion["conjuntos"]}
+            elif (
+                not math.isfinite(valor)
+                or not definicion["dominio"][0] <= valor <= definicion["dominio"][1]
+            ):
+                estado, motivo = (
+                    "FUERA_DE_DOMINIO",
+                    "Medición fuera del dominio; revisar instrumento y unidad.",
+                )
+            elif campo == "humedad_grano" and dato.metodo not in {"INSTRUMENTAL", "LABORATORIO"}:
+                estado, motivo = (
+                    "INVALIDO",
+                    "La humedad exige medición instrumental o de laboratorio.",
+                )
+            else:
+                mu = {k: pertenencia(valor, p) for k, p in definicion["conjuntos"].items()}
+            if motivo:
+                pendientes.append(
+                    Pendiente(campo, motivo, 3 if definicion["tipo"] == "CATEGORICA" else 2)
+                )
+            grados[campo] = mu
+            entradas[campo] = {
+                "id": campo,
+                "nombre": definicion["nombre"],
+                "valor": valor,
+                "unidad": definicion["unidad"],
+                "estado": estado,
+                "pertenencias": mu,
+                "definicion": definicion,
+                "conjuntos": definicion["conjuntos"],
+                "dominio": definicion["dominio"],
+                "fuentes": definicion["fuentes"],
+                "fecha_observacion": dato.fecha_observacion.isoformat()
+                if dato.fecha_observacion
+                else None,
+                "metodo": dato.metodo,
+                "evidencia": dato.evidencia,
+                "procedencia": dato.procedencia.value,
+            }
+        if modalidad == "HERMETICO":
+            for campo, admitidos in [
+                ("estado_barrera", {"INTEGRA"}),
+                ("procedimiento_interno", {"SENSOR_INTERNO", "INSPECCION_PREVIA_SELLADO"}),
+            ]:
+                dato = instantanea.datos[campo]
+                vigente = (
+                    dato.fecha_observacion is not None
+                    and 0
+                    <= (instantanea.fecha_evaluacion - dato.fecha_observacion).total_seconds()
+                    <= vigencia_horas * 3600
+                )
+                if (
+                    not dato.utilizable
+                    or dato.texto not in admitidos
+                    or not vigente
+                    or not dato.metodo
+                    or not dato.evidencia
+                ):
+                    pendientes.append(
+                        Pendiente(
+                            campo,
+                            "Documentar barrera íntegra y procedimiento interno vigente. Una barrera no íntegra exige reevaluar como no hermético; no se estima humedad interna con HR externa.",
+                            3,
+                        )
+                    )
+        reglas: list[dict[str, Any]] = []
+        if matriz:
+            for r in matriz["reglas"]:
+                alfa = activacion(r["si"], grados) if not pendientes else 0.0
+                reglas.append(
+                    {
+                        **r,
+                        "antecedente": r["si"],
+                        "alfa": alfa,
+                        "consecuente": r["entonces"],
+                        "puntos_salida": modelo["salidas"][r["entonces"]],
+                    }
+                )
+        calculo = (
+            centroide([(r["puntos_salida"], r["alfa"]) for r in reglas]) if not pendientes else None
+        )
+        if matriz and not pendientes and calculo is None:
+            raise ValueError(
+                "Matriz Mamdani sin cobertura numérica: el modelo no produce un resultado válido."
+            )
+        indice, area, curva = calculo if calculo else (None, None, [])
+        clase = next(
+            (c for c in modelo["clasificacion"] if indice is not None and indice < c["hasta"]), None
+        )
+        decision = clase["decision"] if clase else "SIN_CONCLUSION_AUTOMATICA"
+        recomendacion = (
+            clase["recomendacion"]
+            if clase
+            else "Completar o corregir los datos de entrada; no se ha calculado un índice."
+        )
+        activas = [r for r in reglas if r["alfa"] > 0]
+        motivos = tuple(
+            Motivo(
+                id=r["id"] + ":MAMDANI",
+                regla=r["id"],
+                mensaje=f"Activación {r['alfa']:.6f}; consecuente {r['entonces']}.",
+                fuentes=self.base.fuentes_de(r["id"]),
+                fundamento="MIXTO",
+            )
+            for r in activas
+        )
+        traza = tuple(
+            Activacion(
+                i,
+                "MAMDANI",
+                1,
+                r["id"],
+                r["id"],
+                r["entonces"],
+                tuple(f"{h['entrada']}={h['conjunto']}" for h in r["si"]["todos"]),
+                (),
+            )
+            for i, r in enumerate(activas, 1)
+        )
+        dias = clase["control_dias"] if clase else None
+        proximo = instantanea.fecha_evaluacion + timedelta(days=dias) if dias else None
+        autorizada = decision in self.base.decisiones_autorizadas
+        # La vigencia de una recomendación nunca supera la de las mediciones aplicadas.
+        vencimiento: datetime | None = None
+        if autorizada and proximo:
+            limites = [proximo]
+            for campo in [
+                *aplicables,
+                *(["estado_barrera", "procedimiento_interno"] if modalidad == "HERMETICO" else []),
+            ]:
+                fecha = instantanea.datos[campo].fecha_observacion
+                assert fecha is not None
+                limites.append(fecha + timedelta(hours=vigencia_horas))
+            vencimiento = min(limites)
+            proximo = min(proximo, vencimiento)
+        informe = {
+            "tipo": "MAMDANI_MATRICIAL_DIRECTO",
+            "modalidad": modalidad,
+            "matriz": matriz["id"] if matriz else None,
+            "estado": "CALCULADO" if calculo else "DATOS_PENDIENTES",
+            "entradas": entradas,
+            "reglas": reglas,
+            "centroide": indice,
+            "area": area,
+            "curva": curva,
+            "clasificacion": modelo["clasificacion"],
+            "salidas": modelo["salidas"],
+            "decision": decision,
+            "recomendacion": recomendacion,
+            "fundamento": modelo["fundamento"],
+            "operadores": modelo["operadores"],
+        }
+        solicitudes = (
+            {"CUARENTENA_SOLICITADA": tuple(r["id"] for r in activas)}
+            if decision == "CUARENTENA"
+            else {}
+        )
+        iniciales = tuple(
+            (
+                k,
+                (
+                    float(d.numero)
+                    if d.numero is not None
+                    else d.texto
+                    if d.texto is not None
+                    else d.valor
+                ),
+                d.procedencia.value,
+            )
+            for k, d in instantanea.datos.datos.items()
+            if k in aplicables or k in {"estado_barrera", "procedimiento_interno"}
+        )
+        return Resultado(
+            decision_final=decision,
+            motivos=motivos,
+            acciones_requeridas=(
+                Accion(
+                    decision,
+                    recomendacion,
+                    "TECNICO"
+                    if decision in {"CUARENTENA", "SUSPENDER_ALMACENAMIENTO"}
+                    else "PRODUCTOR",
+                ),
+            ),
+            datos_pendientes=tuple(pendientes),
+            estimaciones=(),
+            reglas_activadas=tuple(r["id"] for r in activas),
+            calculos=CalculosTiempo(),
+            fecha_proximo_control=proximo,
+            fecha_vencimiento_autorizacion=vencimiento,
+            solicitudes=solicitudes,
+            riesgo_activo=D if not calculo else F if decision == "AUTORIZAR_ALMACENAMIENTO" else V,
+            version_base=self.base.version_base,
+            version_parametros=self.base.version_parametros,
+            version_motor=self.version,
+            hash_base=self.base.hash,
+            traza=traza,
+            hechos_inferidos=(),
+            hechos_iniciales=iniciales,
+            no_aplicables=("hr_almacen",) if modalidad == "HERMETICO" else (),
+            difuso={
+                "tipo": "MAMDANI_TIPO_1",
+                "estructura": "MATRICIAL_DIRECTA",
+                "version": self.version,
+                "total_reglas": 320,
+                "operadores": modelo["operadores"],
+                "decision": informe,
+                "nota": "Índice de intervención del prototipo; no es probabilidad ni certificación de inocuidad.",
+            },
+        )

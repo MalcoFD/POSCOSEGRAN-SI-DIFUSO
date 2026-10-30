@@ -22,7 +22,7 @@ def rev(u):
 def test_borrador_reintento_y_conflicto(api_real):
     c, h, _ = api_real
     u = unidad(c)
-    body = entrada(u, {'moho_visible': True})
+    body = entrada(u, {'estado_fisico_sanitario': 'HALLAZGO_CRITICO'})
     headers = {**h(), 'If-None-Match': '*'}
     url = f'/api/v1/unidades/{u["id"]}/borrador'
     a = c.put(url, json=body, headers=headers)
@@ -49,10 +49,10 @@ def test_control_evento_y_admision(api_real):
     assert c.get(f'/api/v1/unidades/{u["id"]}/vigencia').json()['estado'] == 'INVALIDADA'
     assert c.post(f'/api/v1/unidades/{u["id"]}/admisiones',json=admision,headers=h()).status_code == 409
     u = actual(c,u)
-    obs = entrada(u, {'moho_visible': True})['observaciones']
+    obs = entrada(u, {'estado_fisico_sanitario': 'HALLAZGO_CRITICO'})['observaciones']
     control = post(c,f'/unidades/{u["id"]}/controles',{**rev(u),'tipo':'GRANO',
         'fecha':datetime.now(UTC).isoformat(),'observaciones':obs,'evidencia':'Moho observado'})
-    assert not control['completo']
+    assert control['completo']
     u = actual(c,u)
     result = post(c,f'/unidades/{u["id"]}/evaluaciones',entrada(u,{}))
     assert result['evaluacion']['decision_final'] == 'CUARENTENA'
@@ -61,7 +61,7 @@ def test_control_evento_y_admision(api_real):
 def test_revision_y_resolucion_tecnica(api_real, url_bd):
     c, h, usuarios = api_real
     u = unidad(c)
-    post(c,f'/unidades/{u["id"]}/evaluaciones',entrada(u,{'moho_visible':True}))
+    post(c,f'/unidades/{u["id"]}/evaluaciones',entrada(u,{'estado_fisico_sanitario':'HALLAZGO_CRITICO'}))
     u = actual(c,u)
     incidencia = c.get(f'/api/v1/unidades/{u["id"]}/incidencias').json()['items'][0]
     with Session(create_engine(url_bd)) as db, db.begin():
@@ -116,9 +116,9 @@ def test_usuario_inactivo_y_traslado_ajeno(api_real,url_bd):
 def test_valores_estrictos_y_fecha_sin_zona(api_real):
     c,h,_=api_real
     u=unidad(c)
-    body=entrada(u,{'moho_visible':True})
-    body['observaciones'][0]['valor']='true'
-    assert c.post(f'/api/v1/unidades/{u["id"]}/evaluaciones',json=body,headers=h()).status_code==422
+    body=entrada(u,{'estado_fisico_sanitario':'HALLAZGO_CRITICO'})
     body['observaciones'][0]['valor']=True
+    assert c.post(f'/api/v1/unidades/{u["id"]}/evaluaciones',json=body,headers=h()).status_code==422
+    body['observaciones'][0]['valor']=12
     body['observaciones'][0]['fecha_observacion']='2026-01-01T10:00:00'
     assert c.post(f'/api/v1/unidades/{u["id"]}/evaluaciones',json=body,headers=h()).status_code==422

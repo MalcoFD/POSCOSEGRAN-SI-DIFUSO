@@ -6,6 +6,7 @@ auditoría, separación de funciones y qué ocurre cuando dos activaciones coinc
 
 from __future__ import annotations
 
+import copy
 import itertools
 import threading
 import uuid
@@ -26,17 +27,20 @@ _contador = itertools.count(1)
 
 def _propuesta_unica() -> tuple[str, float]:
     n = next(_contador)
-    return f"9.{n}.{uuid.uuid4().hex[:6]}", round(13.05 + n * 0.01, 2)
+    return f"9.{n}.{uuid.uuid4().hex[:6]}", round(11.8 + n * 0.001, 4)
 
 
 def _proponer(client, headers, *, rol="INGENIERO", guardar=False, motivo=MOTIVO, **extra):
     version, humedad = _propuesta_unica()
+    modelo = copy.deepcopy(client.get("/api/v1/conocimiento").json()["modelo_difuso"])
+    modelo["entradas"]["humedad_grano"]["conjuntos"]["bajo"][-2] = humedad
     cuerpo = {
+        "difuso": modelo,
         "motivo": motivo,
-        "parametros": {"humedad_admision_max": humedad},
+        "parametros": {},
         "reglas": {},
         "version_parametros": version,
-        "version_base": None,
+        "version_base": version,
         "guardar": guardar,
     }
     cuerpo.update(extra)
@@ -62,7 +66,7 @@ def test_simulacion_valida_mide_impacto_sin_registrar(api_real) -> None:
     cuerpo = respuesta.json()
     assert cuerpo["valida"], cuerpo["errores"]
     assert cuerpo["impacto"]["evaluados"] >= 200
-    assert cuerpo["cambios_parametros"][0]["nombre"] == "humedad_admision_max"
+    assert cuerpo["cambios_parametros"] == []
     assert cuerpo["version"] is None, "una simulación no registra ninguna versión"
 
 
@@ -81,7 +85,7 @@ def test_la_simulacion_no_expone_identificadores_de_evaluaciones(api_real) -> No
 
 def test_propuesta_sin_cambios_se_rechaza(api_real) -> None:
     client, headers, _ = api_real
-    respuesta = _proponer(client, headers, parametros={})
+    respuesta = _proponer(client, headers, difuso=client.get("/api/v1/conocimiento").json()["modelo_difuso"])
     assert respuesta.status_code == 200, respuesta.text
     cuerpo = respuesta.json()
     assert not cuerpo["valida"]
@@ -102,7 +106,7 @@ def test_propuesta_con_contenido_invalido_se_rechaza(api_real) -> None:
     assert respuesta.status_code == 200, respuesta.text
     cuerpo = respuesta.json()
     assert not cuerpo["valida"]
-    assert any("parametro_que_no_existe" in e for e in cuerpo["errores"]), cuerpo["errores"]
+    assert cuerpo["errores"]
 
 
 def test_guardar_registra_la_propuesta_en_estado_propuesta(api_real) -> None:

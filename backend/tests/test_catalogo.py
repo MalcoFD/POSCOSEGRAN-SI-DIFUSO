@@ -21,7 +21,7 @@ def _regla(codigo: str) -> dict[str, object]:
 
 
 def _reglas() -> list[dict[str, object]]:
-    return [_regla(f"R{n:02d}") for n in range(1, 53)]
+    return [_regla(f"NH{n:03d}") for n in range(1,257)] + [_regla(f"H{n:03d}") for n in range(1,65)]
 
 
 def _catalogo(**cambios: object) -> dict[str, object]:
@@ -38,7 +38,7 @@ def _catalogo(**cambios: object) -> dict[str, object]:
 
 def test_catalogo_completo_es_valido() -> None:
     catalogo = Catalogo.model_validate(_catalogo())
-    assert len(catalogo.reglas) == 52
+    assert len(catalogo.reglas) == 320
 
 
 def test_faltan_reglas_invalida_el_catalogo() -> None:
@@ -46,9 +46,9 @@ def test_faltan_reglas_invalida_el_catalogo() -> None:
         Catalogo.model_validate(_catalogo(reglas=_reglas()[:-1]))
 
 
-def test_las_ramas_r30_ya_no_se_admiten() -> None:
+def test_no_admite_secciones_ajenas_al_catalogo() -> None:
     with pytest.raises(ValidationError):
-        Catalogo.model_validate(_catalogo(ramas_r30=[_regla("R30.1")]))
+        Catalogo.model_validate(_catalogo(seccion_ajena=[]))
 
 
 def test_fuente_no_declarada_invalida_el_catalogo() -> None:

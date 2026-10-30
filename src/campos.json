@@ -1,4 +1,22 @@
 {
+  "estado_fisico_sanitario": {
+    "tipo": "X",
+    "unidad": "TEXTO",
+    "paso": 3,
+    "admite_no_aplica": false
+  },
+  "estado_barrera": {
+    "tipo": "X",
+    "unidad": "TEXTO",
+    "paso": 3,
+    "admite_no_aplica": false
+  },
+  "procedimiento_interno": {
+    "tipo": "X",
+    "unidad": "TEXTO",
+    "paso": 3,
+    "admite_no_aplica": false
+  },
   "clima_calido": {
     "tipo": "B",
     "unidad": "BOOLEANO",

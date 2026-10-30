@@ -1,58 +1,27 @@
-import { useId, useState } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { nombre, request, type Schema } from '../api/client'
-import Panel, { Empty, ErrorMessage, PageHeader, SkeletonPage } from '../components/Shared'
-import { IconCode, IconHelp, IconSearch } from '../components/Icons'
+import { request, type Schema } from '../api/client'
+import Panel, { ErrorMessage, Field, PageHeader, SkeletonPage } from '../components/Shared'
+import { leerModelo, texto, colores, antecedente } from '../components/conocimiento/difuso'
 import { Source } from './Resultado'
-import ModeloAlmacenamiento from '../components/ModeloAlmacenamiento'
-import Guiado from '../components/conocimiento/Guiado'
-import Tecnico from '../components/conocimiento/Tecnico'
-import { leerModelo } from '../components/conocimiento/difuso'
-
-type Modo = 'guiada' | 'tecnica'
-const CLAVE = 'poscosegran:conocimiento:modo'
-function modoInicial(): Modo {
-  try { return localStorage.getItem(CLAVE) === 'tecnica' ? 'tecnica' : 'guiada' } catch { return 'guiada' }
-}
-
+import GraficoPertenencia from '../components/GraficoPertenencia'
 export default function Conocimiento() {
-  const [q, setQ] = useState('')
-  const [modo, setModoEstado] = useState<Modo>(modoInicial)
-  const idBuscar = useId()
-  const data = useQuery({ queryKey: ['conocimiento'], queryFn: () => request<Schema['Catalogo']>('/conocimiento') })
-  function setModo(m: Modo) { setModoEstado(m); try { localStorage.setItem(CLAVE, m) } catch { /* Preferencia opcional. */ } }
-  if (data.isLoading) return <SkeletonPage label="Cargando la base de conocimiento…" />
-  const modelo = leerModelo(data.data?.modelo_difuso)
-  const vista: Modo = modelo ? modo : 'tecnica'
-  const texto = q.toLowerCase()
-  const reglas = data.data ? data.data.reglas.filter(r => JSON.stringify(r).toLowerCase().includes(texto)) : []
-  return <div className="stack">
-    <PageHeader eyebrow={`Conocimiento documentado · Base ${data.data?.version_base ?? '—'} · parámetros ${data.data?.version_parametros ?? '—'}`} title="Base de conocimiento"
-      description="Sistema de inferencia difusa Mamdani. El motor no contiene umbrales ni reglas: los lee de esta base. Lo que ves aquí es exactamente lo que se aplica."
-      actions={modelo && <div className="segmented" role="tablist" aria-label="Modo de lectura">
-        <button role="tab" aria-selected={vista === 'guiada'} onClick={() => setModo('guiada')}><IconHelp size={16} />Vista guiada</button>
-        <button role="tab" aria-selected={vista === 'tecnica'} onClick={() => setModo('tecnica')}><IconCode size={16} />Vista técnica</button>
-      </div>} />
-    <ErrorMessage error={data.error} onRetry={() => void data.refetch()} />
-
-    {modelo && vista === 'guiada' && <Guiado modelo={modelo} />}
-
-    {vista === 'tecnica' && <>
-      {modelo && <Tecnico modelo={modelo} />}
-      <ModeloAlmacenamiento modelo={data.data?.modelo_difuso} />
-      {data.data && <>
-        <Panel title={`Catálogo documental R01–R${String(data.data.reglas.length).padStart(2, '0')}`}>
-          <div className="field" style={{ marginBottom: 12 }}><label htmlFor={idBuscar}>Buscar regla o término</label>
-            <div className="search-box"><IconSearch size={16} /><input id={idBuscar} type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="Ej. R19, humedad, cuarentena" /></div>
-          </div>
-          {reglas.length ? reglas.map(r => <details className="reason" key={r.id}><summary><span className="badge code">{r.id}</span> {r.consecuente}</summary>
-            <div className="form-grid" style={{ marginTop: 8 }}><div><span className="muted" style={{ fontSize: 13 }}>Condición</span><p className="mono" style={{ margin: '2px 0 0', fontSize: 13 }}>{r.antecedente}</p></div><div><span className="muted" style={{ fontSize: 13 }}>Acción</span><p style={{ margin: '2px 0 0' }}>{r.accion}</p></div></div>
-            <Source text={r.fundamento_markdown} /></details>)
-            : <Empty title="Sin coincidencias" icon={<IconSearch size={26} />}>Prueba con otro código de regla o término.</Empty>}
-        </Panel>
-        <Panel title="Parámetros vigentes">{data.data.parametros?.length ? <div className="table-scroll"><table><thead><tr><th>Parámetro</th><th>Valor</th><th>Fundamento</th><th>Fuentes</th></tr></thead><tbody>{data.data.parametros.filter(p => JSON.stringify(p).toLowerCase().includes(texto)).map(p => <tr key={p.nombre}><td>{p.descripcion}<small className="mono">{p.nombre}</small></td><td className="mono-cell">{p.valor} {p.unidad}</td><td><span className="badge">{nombre(p.fundamento)}</span></td><td>{p.fuentes.join(', ') || '—'}</td></tr>)}</tbody></table></div> : <p className="muted">La versión activa no expone parámetros.</p>}</Panel>
-        <Panel title="Fuentes">{data.data.fuentes.map(f => <div className="reason" key={f.id}><span className="badge code">{f.id}</span><Source text={f.referencia_markdown} /></div>)}</Panel>
-      </>}
-    </>}
+  const q = useQuery({ queryKey: ['conocimiento'], queryFn: () => request<Schema['Catalogo']>('/conocimiento') })
+  const [modalidad,setModalidad] = useState('NO_HERMETICO'), [sanitario,setSanitario] = useState('SIN_HALLAZGOS'), [hr,setHr] = useState('bajo'), [busqueda,setBusqueda] = useState('')
+  if (q.isLoading) return <SkeletonPage />
+  const m = leerModelo(q.data?.modelo_difuso)
+  if (!m) return <ErrorMessage error={q.error ?? new Error('No se ha publicado el modelo matricial.')} />
+  const matriz = m.matrices[modalidad], niveles = ['bajo','medio','alto','muy_alto']
+  const reglas = matriz.reglas.filter(r => r.si.todos?.some(h => h.entrada === 'estado_fisico_sanitario' && h.conjunto === sanitario) && (modalidad === 'HERMETICO' || r.si.todos?.some(h => h.entrada === 'hr_almacen' && h.conjunto === hr)))
+  const buscar = (h:string,t:string) => reglas.find(r => r.si.todos?.some(v => v.entrada === 'humedad_grano' && v.conjunto === h) && r.si.todos?.some(v => v.entrada === 'temperatura_grano' && v.conjunto === t))
+  return <div className="stack"><PageHeader title="Modelo Mamdani matricial" eyebrow={`Base ${q.data?.version_base} · Motor 4.0.0-matricial`} description="Dos matrices alternativas por modalidad, un nivel de inferencia y 320 reglas explícitas." />
+    <Panel title="Flujo de evaluación"><p>Captura → validación → fuzzificación → matriz por modalidad → activación mínima → recorte mínimo → agregación máxima → centroide → recomendación e historial.</p><p>{m.fundamento}</p></Panel>
+    <Panel title="Matriz de reglas"><div className="form-grid"><Field label="Modalidad"><select value={modalidad} onChange={e => setModalidad(e.target.value)}><option value="NO_HERMETICO">No hermético · 256 reglas</option><option value="HERMETICO">Hermético · 64 reglas</option></select></Field><Field label="Estado físico y sanitario"><select value={sanitario} onChange={e => setSanitario(e.target.value)}>{Object.keys(m.entradas.estado_fisico_sanitario.conjuntos).map(k => <option key={k} value={k}>{texto(k)}</option>)}</select></Field>{modalidad === 'NO_HERMETICO' && <Field label="HR del almacén"><select value={hr} onChange={e => setHr(e.target.value)}>{niveles.map(k => <option key={k} value={k}>{texto(k)}</option>)}</select></Field>}</div><p>Filas: humedad del grano. Columnas: temperatura del grano. Cada celda es una regla; los selectores recorren los cortes de la matriz completa.</p>
+      <div className="table-scroll"><table className="fuzzy-matrix"><thead><tr><th>Humedad / temperatura</th>{niveles.map(t => <th key={t}>{texto(t)}</th>)}</tr></thead><tbody>{niveles.map(h => <tr key={h}><th>{texto(h)}</th>{niveles.map(t => { const r = buscar(h,t); return <td key={t} style={{borderBottom:`4px solid ${colores[r?.entonces ?? '']}`}}><strong>{texto(r?.entonces ?? '')}</strong><small>{r?.id}</small></td> })}</tr>)}</tbody></table></div>
+    </Panel>
+    <Panel title="Entradas y funciones de pertenencia">{Object.entries(m.entradas).map(([k,e]) => <details className="reason" key={k} open><summary>{e.nombre} · {e.tipo === 'CONTINUA' ? 'Funciones lineales por tramos' : 'Funciones características 0/1'}</summary><p>{e.fundamento}</p>{e.tipo === 'CONTINUA' ? <GraficoPertenencia {...e} /> : <p>La categoría seleccionada tiene pertenencia 1; las otras tres, 0.</p>}<div className="table-scroll"><table><thead><tr><th>Etiqueta</th><th>Definición</th></tr></thead><tbody>{Object.entries(e.conjuntos).map(([n,p]) => <tr key={n}><td>{texto(n)}</td><td>{Array.isArray(p) ? `${p.length === 3 ? 'Tri' : 'Trap'}(${p.join('; ')})` : e.protocolo?.[n]}</td></tr>)}</tbody></table></div></details>)}</Panel>
+    <Panel title="Salida y funciones de pertenencia"><p>Cinco conjuntos representan la necesidad de intervención en una escala de 0 a 100.</p><GraficoPertenencia nombre="Índice de intervención" unidad="puntos" conjuntos={m.salidas} dominio={[0,100]} rangoCompleto /><div className="table-scroll"><table><thead><tr><th>Conjunto</th><th>Vértices</th><th>Recomendación</th></tr></thead><tbody>{m.clasificacion.map(c => <tr key={c.conjunto}><td>{texto(c.conjunto)}</td><td>{m.salidas[c.conjunto].join('; ')}</td><td>{c.recomendacion}</td></tr>)}</tbody></table></div></Panel>
+    <Panel title={`Reglas ejecutables de ${matriz.nombre}`}><Field label="Buscar regla o antecedente"><input value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder="NH001, humedad, separación…" /></Field><div className="table-scroll"><table><thead><tr><th>ID</th><th>SI</th><th>ENTONCES</th></tr></thead><tbody>{matriz.reglas.filter(r => `${r.id} ${antecedente(r.si,m.entradas)} ${r.entonces}`.toLowerCase().includes(busqueda.toLowerCase())).map(r => <tr key={r.id}><td>{r.id}</td><td>{antecedente(r.si,m.entradas)}</td><td>{texto(r.entonces)}</td></tr>)}</tbody></table></div></Panel>
+    <Panel title="Fuentes y fundamento">{q.data?.fuentes.map(s => <div key={s.id}><strong>{s.id}</strong><Source text={s.referencia_markdown} /></div>)}</Panel>
   </div>
 }

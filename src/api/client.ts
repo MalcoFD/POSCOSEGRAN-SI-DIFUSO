@@ -117,6 +117,7 @@ export const iniciales = (texto: string) => texto.split(/\s+/).filter(Boolean).s
 // Etiquetas oficiales de las siete decisiones (Prompt 1). El código técnico se
 // conserva en la API y en la explicación; al usuario se le muestra la etiqueta.
 export const DECISIONES: Record<string, string> = {
+  SUSPENDER_ALMACENAMIENTO: 'Suspender almacenamiento en las condiciones actuales',
   CUARENTENA: 'Separar y solicitar evaluación técnica',
   BLOQUEAR_INGRESO: 'Ingreso no autorizado',
   RETIRAR_LOTE: 'Suspender almacenamiento en las condiciones actuales',
@@ -127,7 +128,7 @@ export const DECISIONES: Record<string, string> = {
 }
 export const decision = (codigo: string) => DECISIONES[codigo] || nombre(codigo)
 export const tonoDecision = (codigo: string) =>
-  codigo === 'CUARENTENA' || codigo === 'BLOQUEAR_INGRESO' || codigo === 'RETIRAR_LOTE' ? 'danger'
+  codigo === 'CUARENTENA' || codigo === 'SUSPENDER_ALMACENAMIENTO' || codigo === 'BLOQUEAR_INGRESO' || codigo === 'RETIRAR_LOTE' ? 'danger'
     : codigo.startsWith('AUTORIZAR') ? 'authorized' : 'warning'
 export const NOTA_PROTOTIPO = 'Prototipo académico. Evalúa condiciones de almacenamiento; no certifica inocuidad ni aptitud para consumo.'
 export const tieneRol = (perfil: Schema['Perfil'] | undefined, rol: string) => !!perfil?.roles.includes(rol as never)

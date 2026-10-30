@@ -1174,7 +1174,7 @@ export interface components {
              * Decision Final
              * @enum {string}
              */
-            decision_final: "CUARENTENA" | "BLOQUEAR_INGRESO" | "RETIRAR_LOTE" | "CORREGIR_Y_REEVALUAR" | "SIN_CONCLUSION_AUTOMATICA" | "AUTORIZAR_CON_MONITOREO" | "AUTORIZAR_ALMACENAMIENTO";
+            decision_final: "SUSPENDER_ALMACENAMIENTO" | "CUARENTENA" | "BLOQUEAR_INGRESO" | "RETIRAR_LOTE" | "CORREGIR_Y_REEVALUAR" | "SIN_CONCLUSION_AUTOMATICA" | "AUTORIZAR_CON_MONITOREO" | "AUTORIZAR_ALMACENAMIENTO";
             /** Motivos */
             motivos: components["schemas"]["Motivo"][];
             /** Acciones Requeridas */

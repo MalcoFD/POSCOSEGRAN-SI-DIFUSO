@@ -4841,6 +4841,7 @@
           "decision_final": {
             "type": "string",
             "enum": [
+              "SUSPENDER_ALMACENAMIENTO",
               "CUARENTENA",
               "BLOQUEAR_INGRESO",
               "RETIRAR_LOTE",

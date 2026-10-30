@@ -39,18 +39,10 @@ enrutador = APIRouter(prefix="/api/v1", tags=["seguimiento"])
 
 # Campos que cada tipo de control debe cubrir para considerarse completo.
 REQUISITOS_CONTROL: dict[str, tuple[str, ...]] = {
-    "INGRESO": (
-        "humedad_grano", "metodo_humedad", "temperatura_grano", "recipiente_limpio",
-        "recipiente_seco", "material_grado_alimentario", "recipiente_resistente",
-        "cierre_seguro", "distancia_piso", "distancia_pared", "distancia_techo",
-        "insectos_vivos", "moho_visible", "granos_defectuosos",
-    ),
-    "GRANO": ("humedad_grano", "temperatura_grano", "insectos_vivos", "moho_visible"),
-    "EXTERIOR": ("sello_integro", "cierre_seguro", "perforacion_barrera", "bolsa_roida"),
-    "ALMACEN": (
-        "temperatura_almacen", "hr_almacen", "limpieza_diaria",
-        "polvo_humo_gases_vapores", "quimicos_combustibles_en_almacen",
-    ),
+    'INGRESO': ('humedad_grano', 'temperatura_grano', 'estado_fisico_sanitario'),
+    'GRANO': ('humedad_grano', 'temperatura_grano', 'estado_fisico_sanitario'),
+    'EXTERIOR': ('estado_barrera',),
+    'ALMACEN': ('hr_almacen',),
 }
 
 

@@ -3,6 +3,7 @@
 Integra por segmentos, añadiendo cruces entre consecuentes. No promedia los
 centroides de las reglas: eso sería otro algoritmo. La curva también explica el cálculo.
 """
+
 from collections.abc import Sequence
 
 from .pertenencia import pertenencia
@@ -11,11 +12,18 @@ from .pertenencia import pertenencia
 def centroide(
     conjuntos: Sequence[tuple[Sequence[float], float]],
 ) -> tuple[float, float, list[list[float]]] | None:
-    activos = [(p, a) for p, a in conjuntos if a > 0]
+    # max(min(a, C), min(b, C)) = min(max(a,b), C): cada curva
+    # consecuente se integra una sola vez, sin cambiar la envolvente.
+    por_curva: dict[tuple[float, ...], float] = {}
+    for puntos, alfa in conjuntos:
+        if alfa > 0:
+            clave = tuple(float(x) for x in puntos)
+            por_curva[clave] = max(por_curva.get(clave, 0.0), alfa)
+    activos = list(por_curva.items())
     if not activos:
         return None
     if any(not 0 < a <= 1 for _, a in activos):
-        raise ValueError('Activación fuera de [0,1]')
+        raise ValueError("Activación fuera de [0,1]")
     vertices: set[float] = set()
     for puntos, alfa in activos:
         p = list(map(float, puntos))
@@ -28,7 +36,7 @@ def centroide(
     for x0, x1 in zip(cortes, cortes[1:]):
         lineas = [(min(a, pertenencia(x0, p)), min(a, pertenencia(x1, p))) for p, a in activos]
         for i, (a0, a1) in enumerate(lineas):
-            for b0, b1 in lineas[i + 1:]:
+            for b0, b1 in lineas[i + 1 :]:
                 d0, d1 = a0 - b0, a1 - b1
                 if d0 * d1 < 0:
                     vertices.add(x0 + (x1 - x0) * d0 / (d0 - d1))

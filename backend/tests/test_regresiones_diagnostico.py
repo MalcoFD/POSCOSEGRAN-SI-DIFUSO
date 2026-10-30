@@ -1,118 +1,158 @@
-"""Regresiones de la ampliación R31–R52 sobre PostgreSQL real."""
+"""Regresiones de captura, trazabilidad y conocimiento matricial por HTTP."""
+
 from datetime import UTC, datetime, timedelta
-
+import copy
 import pytest
-
-from test_integracion_api import agregar, entrada, post, unidad
+from test_integracion_api import entrada, unidad, post
 
 
 def observacion(campo, valor):
-    return {'campo': campo, 'captura': 'APORTADO', 'valor': valor, 'unidad': 'BOOLEANO',
-            'valor_original': str(valor), 'fecha_observacion': (datetime.now(UTC)-timedelta(seconds=1)).isoformat(),
-            'metodo': 'Inspección documentada', 'evidencia': 'Acta de revisión', 'motivo_no_aplica': None}
-
-
-@pytest.mark.bd
-@pytest.mark.parametrize('campos', [
-    ['humedad_por_agua_en_unidad'], ['contacto_con_unidad_en_cuarentena'],
-    ['grano_derramado_reincorporado'],
-    ['aplicacion_plaguicida_sin_registro_competente', 'exposicion_quimica_del_grano'],
-])
-def test_cuarentena_nueva_persiste_y_no_la_cierra_una_medicion(api_real, campos):
-    c, _, _ = api_real
-    u = unidad(c)
-    body = entrada(u)
-    agregar(body, *[observacion(k, True) for k in campos])
-    r = post(c, f'/unidades/{u["id"]}/evaluaciones', body)
-    assert r['evaluacion']['decision_final'] == 'CUARENTENA'
-    episodios = c.get(f'/api/v1/unidades/{u["id"]}/incidencias').json()['items']
-    assert len(episodios) == 1 and episodios[0]['tipo'] == 'CUARENTENA'
-    if len(campos) == 2:
-        assert set(episodios[0]['causas']) == {'R50', 'R51'}
-    u = c.get('/api/v1/unidades/' + u['id']).json()
-    body = entrada(u)
-    agregar(body, *[observacion(k, False) for k in campos])
-    r = post(c, f'/unidades/{u["id"]}/evaluaciones', body)
-    assert r['evaluacion']['decision_final'] == 'CUARENTENA'
-    assert r['vigencia']['estado'] != 'VIGENTE'
-
-
-def test_no_aplica_vencimiento_con_contexto():
-    from poscosegran.dominio.valores import Dato, EstadoDato
-    from poscosegran.servicios.aplicabilidad import comprobar
-    n = Dato('fecha_vencimiento_producto', no_aplica=True, motivo_no_aplica='Sin vencimiento comercial aplicable')
-    falso = Dato('vencimiento_aplicable', estado=EstadoDato.VALIDO, valor=False)
-    r = comprobar({'fecha_vencimiento_producto': n, 'vencimiento_aplicable': falso}, 'NO_HERMETICO', 'INGRESO')
-    assert r['fecha_vencimiento_producto'].no_aplica
+    return {
+        "campo": campo,
+        "captura": "APORTADO",
+        "valor": valor,
+        "unidad": "BOOLEANO",
+        "valor_original": str(valor),
+        "fecha_observacion": (datetime.now(UTC) - timedelta(seconds=1)).isoformat(),
+        "metodo": "INSPECCION",
+        "evidencia": "Inspección documentada de campo",
+        "motivo_no_aplica": None,
+    }
 
 
 @pytest.mark.bd
 def test_api_mamdani_guarda_traza_y_reproduce_historial(api_real):
     c, _, _ = api_real
     u = unidad(c)
-    e = post(c, f'/unidades/{u["id"]}/evaluaciones', entrada(u))['evaluacion']
-    assert e['difuso']['tipo'] == 'MAMDANI_TIPO_1'
-    assert e['version_motor'] == '3.0.0-mamdani'
-    detalle = c.get(f'/api/v1/evaluaciones/{e["id"]}/explicacion')
-    assert detalle.status_code == 200, detalle.text
-    assert detalle.json()['difuso']['modulos']
-    assert detalle.json()['difuso']['decision']['decision'] == e['decision_final']
+    e = post(c, f'/unidades/{u["id"]}/evaluaciones', entrada(u))["evaluacion"]
+    assert e["version_motor"] == "4.0.0-matricial"
+    assert len(e["difuso"]["decision"]["reglas"]) == 256
+    assert "modulos" not in e["difuso"]
+    x = c.get(f'/api/v1/evaluaciones/{e["id"]}/explicacion')
+    assert x.status_code == 200, x.text
+    assert x.json()["difuso"] == e["difuso"]
+    assert all(not r.startswith(("R", "MF")) for r in e["reglas_activadas"])
 
 
 @pytest.mark.bd
-def test_adquisicion_valida_y_simula_curvas_mamdani(api_real):
-    import copy
-    from pathlib import Path
-    from poscosegran.conocimiento.cargar import cargar
-    c, h, _ = api_real
-    cargar(Path(__file__).resolve().parents[2] / 'knowledge', activar=True, notas='Prueba de adquisición difusa')
-    modelo = c.get('/api/v1/conocimiento').json()['modelo_difuso']
-    propuesta = copy.deepcopy(modelo)
-    propuesta['politica']['monitoreo_desde'] = 30
-    body = {'motivo': 'Revisión de la política preventiva Mamdani', 'version_base': '3.2-prueba', 'difuso': propuesta, 'guardar': False}
-    r = c.post('/api/v1/adquisicion/propuestas', json=body, headers=h('INGENIERO'))
-    assert r.status_code == 200 and r.json()['valida'], r.text
-    assert r.json()['impacto']['evaluados'] >= 242
-    body['difuso']['modulos'][0]['entradas']['humedad_grano']['conjuntos']['alto'] = [15, 10, 5]
-    r = c.post('/api/v1/adquisicion/propuestas', json=body, headers=h('INGENIERO'))
-    assert r.status_code == 200 and not r.json()['valida'], r.text
-
-
-@pytest.mark.bd
-def test_autorizacion_difusa_ordinaria_y_seguimiento_real(api_real):
-    from pathlib import Path
-    from casos.base import base as completa
-    from poscosegran.conocimiento.cargar import cargar
-    from poscosegran.dominio.campos import CAMPOS
+def test_dato_actual_desconocido_no_resucita_valor_favorable(api_real):
     c, _, _ = api_real
-    cargar(Path(__file__).resolve().parents[2] / 'knowledge', activar=True, notas='Verificación de autorización difusa')
     u = unidad(c)
+    post(c, f'/unidades/{u["id"]}/evaluaciones', entrada(u))
+    u = c.get("/api/v1/unidades/" + u["id"]).json()
+    b = entrada(u, {})
+    b["observaciones"] = [
+        {
+            "campo": "estado_fisico_sanitario",
+            "captura": "DESCONOCIDO",
+            "valor": None,
+            "unidad": "TEXTO",
+            "valor_original": None,
+            "fecha_observacion": None,
+            "metodo": None,
+            "evidencia": None,
+            "motivo_no_aplica": None,
+        }
+    ]
+    e = post(c, f'/unidades/{u["id"]}/evaluaciones', b)["evaluacion"]
+    assert e["decision_final"] == "SIN_CONCLUSION_AUTOMATICA"
+    assert e["difuso"]["decision"]["centroide"] is None
 
-    def completa_entrada(u, temperatura):
-        body = entrada(u)
-        for o in body['observaciones']:
-            if o['campo'] == 'temperatura_grano':
-                o['valor'] = temperatura
-        for k, d in completa().datos.datos.items():
-            if CAMPOS[k].paso < 6:
-                continue
-            o = observacion(k, d.valor if isinstance(d.valor, bool) else float(d.valor))
-            o['unidad'] = CAMPOS[k].unidad
-            agregar(body, o)
-        return body
 
-    r = post(c, f'/unidades/{u["id"]}/evaluaciones', completa_entrada(u, 10))
-    assert r['evaluacion']['decision_final'] == 'AUTORIZAR_ALMACENAMIENTO', r
-    u = c.get('/api/v1/unidades/' + u['id']).json()
-    r = post(c, f'/unidades/{u["id"]}/evaluaciones', completa_entrada(u, 24))
-    assert r['evaluacion']['decision_final'] == 'CORREGIR_Y_REEVALUAR'
-    u = c.get('/api/v1/unidades/' + u['id']).json()
-    post(c, f'/unidades/{u["id"]}/planes', {
-        'revision_unidad': u['revision'], 'revision_almacen': u['revision_almacen'],
-        'fecha_proximo_control': (datetime.now(UTC)+timedelta(days=5)).isoformat(),
-        'fecha_salida_prevista': (datetime.now(UTC)+timedelta(days=20)).isoformat(),
-        'intervalo_dias': 5, 'actividades': 'Control por proximidad térmica según Mamdani',
-    })
-    u = c.get('/api/v1/unidades/' + u['id']).json()
-    r = post(c, f'/unidades/{u["id"]}/evaluaciones', completa_entrada(u, 24))
-    assert r['evaluacion']['decision_final'] == 'AUTORIZAR_CON_MONITOREO', r
+@pytest.mark.bd
+def test_hermetico_aplica_solo_64_reglas_y_documenta_integridad(api_real):
+    c, _, _ = api_real
+    u = unidad(c)
+    r = c.patch(
+        "/api/v1/unidades/" + u["id"],
+        headers={"If-Match": f'"{u["revision"]}"'},
+        json={
+            "id_lote": u["id_lote"],
+            "id_almacen": u["id_almacen"],
+            "nombre_recipiente": "Hermético",
+            "tipo_almacenamiento": "HERMETICO",
+        },
+    )
+    assert r.status_code == 200, r.text
+    u = r.json()
+    e = post(c, f'/unidades/{u["id"]}/evaluaciones', entrada(u))["evaluacion"]
+    assert e["decision_final"] == "AUTORIZAR_ALMACENAMIENTO"
+    assert len(e["difuso"]["decision"]["reglas"]) == 64
+    assert e["difuso"]["decision"]["entradas"]["hr_almacen"]["estado"] == "NO_APLICA"
+    u = c.get("/api/v1/unidades/" + u["id"]).json()
+    e = post(c, f'/unidades/{u["id"]}/evaluaciones', entrada(u, {"estado_barrera": "NO_INTEGRA"}))[
+        "evaluacion"
+    ]
+    assert e["decision_final"] == "SIN_CONCLUSION_AUTOMATICA"
+
+
+@pytest.mark.bd
+def test_inspeccion_sin_evidencia_no_produce_indice(api_real):
+    c, _, _ = api_real
+    u = unidad(c)
+    b = entrada(u)
+    next(o for o in b["observaciones"] if o["campo"] == "estado_fisico_sanitario")["evidencia"] = (
+        None
+    )
+    e = post(c, f'/unidades/{u["id"]}/evaluaciones', b)["evaluacion"]
+    assert e["decision_final"] == "SIN_CONCLUSION_AUTOMATICA"
+
+
+@pytest.mark.bd
+def test_propuesta_de_curvas_y_rechazo_de_matriz_incompleta(api_real):
+    c, h, _ = api_real
+    m = copy.deepcopy(c.get("/api/v1/conocimiento").json()["modelo_difuso"])
+    m["entradas"]["temperatura_grano"]["conjuntos"]["bajo"][-2] = 14
+    b = {
+        "motivo": "Revisión documentada de transición térmica",
+        "version_base": "6.1-regresion",
+        "difuso": m,
+        "guardar": False,
+    }
+    r = c.post("/api/v1/adquisicion/propuestas", json=b, headers=h("INGENIERO"))
+    assert r.status_code == 200 and r.json()["valida"], r.text
+    assert r.json()["impacto"]["evaluados"] >= 320
+    m["matrices"]["HERMETICO"]["reglas"].pop()
+    r = c.post("/api/v1/adquisicion/propuestas", json=b, headers=h("INGENIERO"))
+    assert r.status_code == 200 and not r.json()["valida"], r.text
+
+
+@pytest.mark.bd
+def test_control_completo_critico_abre_incidencia_sin_duplicarla(api_real):
+    c, _, _ = api_real
+    u = unidad(c)
+    b = entrada(u, {"estado_fisico_sanitario": "HALLAZGO_CRITICO"})
+    control = post(
+        c,
+        f'/unidades/{u["id"]}/controles',
+        {
+            "revision_unidad": u["revision"],
+            "revision_almacen": u["revision_almacen"],
+            "tipo": "GRANO",
+            "fecha": b["observaciones"][0]["fecha_observacion"],
+            "observaciones": b["observaciones"],
+            "evidencia": "Moho observado en muestra representativa",
+        },
+    )
+    assert control["completo"]
+    items = c.get(f'/api/v1/unidades/{u["id"]}/incidencias').json()["items"]
+    assert len(items) == 1 and items[0]["tipo"] == "CUARENTENA"
+
+
+@pytest.mark.bd
+def test_vigencia_no_supera_antiguedad_de_mediciones(api_real):
+    c, _, _ = api_real
+    u = unidad(c)
+    b = entrada(u)
+    fecha = (datetime.now(UTC) - timedelta(days=6)).isoformat()
+    for o in b["observaciones"]:
+        o["fecha_observacion"] = fecha
+    r = post(c, f'/unidades/{u["id"]}/evaluaciones', b)
+    assert r["vigencia"]["estado"] == "VIGENTE"
+    limite = datetime.fromisoformat(fecha) + timedelta(days=7)
+    assert (
+        datetime.fromisoformat(
+            r["evaluacion"]["fecha_vencimiento_autorizacion"].replace("Z", "+00:00")
+        )
+        <= limite
+    )

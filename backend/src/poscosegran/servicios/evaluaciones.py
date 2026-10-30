@@ -163,7 +163,9 @@ def construir_instantanea(
     if evento and evento.tipo in {"APERTURA", "RESELLADO", "SECADO", "ENFRIAMIENTO", "EXPOSICION_AGUA", "CARGA_DESCARGA"}:
         # Una comprobación anterior al evento no demuestra las condiciones posteriores.
         for campo in ("cierre_seguro", "sello_integro", "temperatura_grano_previa",
-                      "fecha_inspeccion_grano", "fecha_inspeccion_exterior", "ingreso_inspeccionado"):
+                      "fecha_inspeccion_grano", "fecha_inspeccion_exterior", "ingreso_inspeccionado",
+                      "estado_barrera", "procedimiento_interno", "estado_fisico_sanitario",
+                      "humedad_grano", "temperatura_grano"):
             dato = datos.get(campo)
             if dato and (dato.fecha_observacion is None or dato.fecha_observacion <= evento.fecha):
                 datos[campo] = replace(dato, estado=EstadoDato.VENCIDO)
@@ -266,56 +268,29 @@ def construir_instantanea(
     return instantanea, aplicadas
 
 
-TIPO_INCIDENCIA_POR_HALLAZGO: dict[str, tuple[str, tuple[str, ...]]] = {
-    "CUARENTENA_SOLICITADA": ("CUARENTENA", ("R19",)),
-    "INFESTACION_SOSPECHADA": ("REVISION_PLAGAS", ("R15",)),
-    "PUNTO_CALIENTE_SOSPECHADO": ("REVISION_TERMICA", ("R09",)),
-}
-
-
 def sincronizar_incidencias(
     sesion: Session, id_unidad: uuid.UUID, resultado: motor.Resultado, id_evaluacion: uuid.UUID | None
 ) -> list[Incidencia]:
-    """Abre los episodios que el motor solicita. Cerrarlos exige resolución registrada."""
-    hallazgos = {motivo.id.split(":", 1)[-1] for motivo in resultado.motivos}
-    abiertas = {
-        fila.tipo: fila
-        for fila in sesion.scalars(
-            sa.select(Incidencia).where(
-                Incidencia.id_unidad == id_unidad, Incidencia.estado == "ABIERTA"
-            )
-        )
-    }
-    creadas: list[Incidencia] = []
-    # Las ampliaciones y Mamdani generan solicitudes con sus causas. No depender
-    # exclusivamente del nombre del hallazgo R19: R36/R43/R46/R50/R51 también
-    # requieren episodios persistentes, aunque no pase por esa producción.
-    cuarentena = tuple(resultado.solicitudes.get('CUARENTENA_SOLICITADA', ()))
-    tipos = dict(TIPO_INCIDENCIA_POR_HALLAZGO)
-    if cuarentena:
-        hallazgos.add('CUARENTENA_SOLICITADA')
-        tipos['CUARENTENA_SOLICITADA'] = ('CUARENTENA', cuarentena)
-    for hallazgo, (tipo, reglas) in tipos.items():
-        if hallazgo not in hallazgos:
-            continue
-        if tipo in abiertas:
-            episodio = abiertas[tipo]
-            causas = list(dict.fromkeys([*episodio.causas, *reglas]))
-            if causas != episodio.causas:
-                episodio.causas = causas
-                episodio.revision += 1
-            continue
-        incidencia = Incidencia(
-            id_unidad=id_unidad,
-            tipo=tipo,
-            estado="ABIERTA",
-            causas=list(reglas),
-            id_evaluacion_origen=id_evaluacion,
-        )
-        sesion.add(incidencia)
-        creadas.append(incidencia)
-        abiertas[tipo] = incidencia
-    return creadas
+    """Registra el seguimiento de la recomendación ya obtenida por Mamdani.
+
+    No cambia la decisión ni ejecuta otra base de reglas. Una incidencia abierta
+    conserva su historia hasta una resolución técnica registrada.
+    """
+    if resultado.decision_final != 'CUARENTENA':
+        return []
+    abierta = sesion.scalar(sa.select(Incidencia).where(Incidencia.id_unidad == id_unidad,
+        Incidencia.tipo == 'CUARENTENA', Incidencia.estado == 'ABIERTA'))
+    causas = list(resultado.reglas_activadas)
+    if abierta:
+        nuevas = list(dict.fromkeys([*abierta.causas, *causas]))
+        if nuevas != abierta.causas:
+            abierta.causas = nuevas
+            abierta.revision += 1
+        return []
+    fila = Incidencia(id_unidad=id_unidad, tipo='CUARENTENA', estado='ABIERTA',
+        causas=causas, id_evaluacion_origen=id_evaluacion)
+    sesion.add(fila)
+    return [fila]
 
 
 def persistir(

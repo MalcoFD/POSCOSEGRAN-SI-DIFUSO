@@ -84,6 +84,7 @@ def a_json(inst: Instantanea) -> dict[str, Any]:
                 "procedencia": dato.procedencia.value,
                 "no_aplica": dato.no_aplica,
                 "motivo_no_aplica": dato.motivo_no_aplica,
+                "evidencia": dato.evidencia,
             }
             for campo, dato in sorted(inst.datos.datos.items())
         },
@@ -119,7 +120,9 @@ def a_json(inst: Instantanea) -> dict[str, Any]:
             "fecha_salida_prevista": _f(inst.plan.fecha_salida_prevista),
             "vigente": inst.plan.vigente,
         },
-        "dictamen": None if inst.dictamen is None else {
+        "dictamen": None
+        if inst.dictamen is None
+        else {
             "humedad_min": _d(inst.dictamen.humedad_min),
             "humedad_max": _d(inst.dictamen.humedad_max),
             "plazo_maximo_dias": inst.dictamen.plazo_maximo_dias,
@@ -130,7 +133,9 @@ def a_json(inst: Instantanea) -> dict[str, Any]:
             {"id": e.id, "tipo": e.tipo, "causas": list(e.causas), "abierta": e.abierta}
             for e in inst.episodios
         ],
-        "resultado_revision_plagas": inst.resultado_revision_plagas.value if inst.resultado_revision_plagas else None,
+        "resultado_revision_plagas": inst.resultado_revision_plagas.value
+        if inst.resultado_revision_plagas
+        else None,
         "revision_plagas_id": inst.revision_plagas_id,
         "revision_plagas_cubre_indicios_actuales": inst.revision_plagas_cubre_indicios_actuales,
         "sensor_interno_hermetico": inst.sensor_interno_hermetico,
@@ -146,7 +151,9 @@ def desde_json(datos: dict[str, Any]) -> Instantanea:
     return Instantanea(
         fecha_evaluacion=_p(datos["fecha_evaluacion"]),  # type: ignore[arg-type]
         fase=Fase(datos["fase"]) if datos.get("fase") else None,
-        tipo_almacenamiento=Modalidad(datos["tipo_almacenamiento"]) if datos.get("tipo_almacenamiento") else None,
+        tipo_almacenamiento=Modalidad(datos["tipo_almacenamiento"])
+        if datos.get("tipo_almacenamiento")
+        else None,
         clima_calido=Tri(datos["clima_calido"]),
         datos=Conjunto(
             {
@@ -160,6 +167,7 @@ def desde_json(datos: dict[str, Any]) -> Instantanea:
                     procedencia=Procedencia(d.get("procedencia", "ACTUAL")),
                     no_aplica=bool(d.get("no_aplica")),
                     motivo_no_aplica=d.get("motivo_no_aplica"),
+                    evidencia=d.get("evidencia"),
                 )
                 for campo, d in datos["datos"].items()
             }
@@ -196,7 +204,9 @@ def desde_json(datos: dict[str, Any]) -> Instantanea:
             fecha_salida_prevista=_p(plan.get("fecha_salida_prevista")),
             vigente=bool(plan["vigente"]),
         ),
-        dictamen=None if not dictamen else Dictamen(
+        dictamen=None
+        if not dictamen
+        else Dictamen(
             humedad_min=Decimal(dictamen["humedad_min"]),
             humedad_max=Decimal(dictamen["humedad_max"]),
             plazo_maximo_dias=int(dictamen["plazo_maximo_dias"]),
@@ -204,16 +214,27 @@ def desde_json(datos: dict[str, Any]) -> Instantanea:
             vigente=bool(dictamen["vigente"]),
         ),
         episodios=tuple(
-            Episodio(id=e["id"], tipo=e["tipo"], causas=tuple(e.get("causas", ())), abierta=bool(e.get("abierta", True)))
+            Episodio(
+                id=e["id"],
+                tipo=e["tipo"],
+                causas=tuple(e.get("causas", ())),
+                abierta=bool(e.get("abierta", True)),
+            )
             for e in datos.get("episodios", [])
         ),
         resultado_revision_plagas=(
-            ResultadoRevision(datos["resultado_revision_plagas"]) if datos.get("resultado_revision_plagas") else None
+            ResultadoRevision(datos["resultado_revision_plagas"])
+            if datos.get("resultado_revision_plagas")
+            else None
         ),
         revision_plagas_id=datos.get("revision_plagas_id"),
-        revision_plagas_cubre_indicios_actuales=bool(datos.get("revision_plagas_cubre_indicios_actuales")),
+        revision_plagas_cubre_indicios_actuales=bool(
+            datos.get("revision_plagas_cubre_indicios_actuales")
+        ),
         sensor_interno_hermetico=bool(datos.get("sensor_interno_hermetico")),
-        temperatura_ambiente_maxima_intervalo=_n(datos.get("temperatura_ambiente_maxima_intervalo")),
+        temperatura_ambiente_maxima_intervalo=_n(
+            datos.get("temperatura_ambiente_maxima_intervalo")
+        ),
         datos_inconsistentes=tuple(datos.get("datos_inconsistentes", ())),
     )
 
@@ -221,6 +242,7 @@ def desde_json(datos: dict[str, Any]) -> Instantanea:
 # --- Forma compacta para colecciones de casos ---------------------------------------
 # Los casos de referencia comparten casi todas sus observaciones. Se guarda una
 # plantilla de datos y, en cada caso, solo lo que difiere de ella.
+
 
 def comprimir(hechos: dict[str, Any], plantilla: dict[str, Any]) -> dict[str, Any]:
     datos = hechos["datos"]

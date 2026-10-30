@@ -38,7 +38,7 @@ def test_reutiliza_en_dos_unidades_y_no_en_otro_almacen(api_real):
         assert bool(obs)==(x['id']!=ajena['id'])
         if obs:
             assert obs[0]['entrada']['valor'] is False and obs[0]['procedencia']=='HISTORICA'
-        assert not r['decision_final'].startswith('AUTORIZAR')  # la inspección parcial no inventa el resto
+        assert r['decision_final'] == 'AUTORIZAR_ALMACENAMIENTO'  # La inspección del almacén es contexto, no una entrada sanitaria del grano.
     assert i['id_almacen']==u['id_almacen']
 
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { ApiError, request, type EvaluacionEntrada, type Schema } from '../api/client'
 import { desdeObservaciones, fechaLocal, type CapturaDatos } from '../components/Captura'
 
-export const pasosEvaluacion = ['Lote y modalidad', 'Mediciones y plazo', 'Verificaciones']
+export const pasosEvaluacion = ['Lote y modalidad', 'Mediciones', 'Inspección y revisión']
 export const pasoCompacto = (paso: number) => paso === 1 ? 1 : paso === 2 || paso === 5 ? 2 : 3
 export const formularioVacio = () => ({ datos: {} as CapturaDatos, fase: '' as '' | 'INGRESO' | 'SEGUIMIENTO', dias: '', salida: '', inicio: '', vida: '', evidencia: '', intervalos: [] as { inicio: string; fin: string; humedad: string; temperatura: string; metodo: string; evidencia: string }[] })
 type Formulario = ReturnType<typeof formularioVacio>

@@ -5,6 +5,7 @@ import Panel, { Badge, Empty, ErrorMessage, Field, PageHeader, Skeleton, Skeleto
 import { useToast } from '../components/Toast'
 import { IconActivity } from '../components/Icons'
 import Captura, { ahoraLocal, convertir, type CapturaDatos } from '../components/Captura'
+import InspeccionMatricial from '../components/InspeccionMatricial'
 import { useAppNavigate, useId } from '../App'
 
 const opciones = (valores: string[]) => valores.map(t => <option key={t} value={t}>{nombre(t)}</option>)
@@ -23,7 +24,7 @@ export default function Seguimiento() {
   return <Detalle key={id} id={id} />
 }
 
-type Pestana = 'incidencias' | 'evaluaciones' | 'controles' | 'planes' | 'dictamenes' | 'eventos'
+type Pestana = 'incidencias' | 'evaluaciones' | 'controles' | 'planes' | 'eventos'
 
 function Detalle({ id }: { id: string }) {
   const navigate = useAppNavigate(), qc = useQueryClient(), avisar = useToast()
@@ -55,7 +56,7 @@ function Detalle({ id }: { id: string }) {
       if (!data.data) throw new Error('Espera a que cargue la unidad')
       const revisions = revisiones(data.data.u)
       let path = `/unidades/${id}/${action}`, body: unknown
-      if (action === 'controles') body = { ...revisions, tipo: form.tipoControl, fecha: new Date(form.fecha).toISOString(), evidencia: form.evidencia, observaciones: convertir(datos) }
+      if (action === 'controles') body = { ...revisions, tipo: form.tipoControl, fecha: new Date(form.fecha).toISOString(), evidencia: form.evidencia, observaciones: convertir(Object.fromEntries(Object.entries(datos).filter(([k]) => (form.tipoControl === 'ALMACEN' ? ['hr_almacen'] : form.tipoControl === 'EXTERIOR' ? ['estado_barrera'] : ['humedad_grano','temperatura_grano','hr_almacen','estado_fisico_sanitario','estado_barrera','procedimiento_interno']).includes(k)))) }
       else if (action === 'eventos') body = { ...revisions, tipo: form.tipoEvento, fecha: new Date(form.fecha).toISOString(), evidencia: form.evidencia }
       else if (action === 'planes') body = { ...revisions, fecha_proximo_control: new Date(form.proximo).toISOString(), fecha_salida_prevista: new Date(form.salida).toISOString(), intervalo_dias: Number(form.intervalo), actividades: form.actividades }
       else if (action === 'dictamenes') body = { ...revisions, humedad_min: Number(form.humedadMin.replace(',', '.')), humedad_max: Number(form.humedadMax.replace(',', '.')), plazo_maximo_dias: Number(form.plazo), vence_en: new Date(form.vence).toISOString(), condiciones: form.condiciones, evidencia: form.evidencia }
@@ -78,7 +79,7 @@ function Detalle({ id }: { id: string }) {
   const abiertas = d.incidencias.filter(i => i.estado === 'ABIERTA').length
   const activa: Pestana = pestana ?? (abiertas ? 'incidencias' : 'evaluaciones')
   const ultima = d.historial[0]?.evaluacion
-  const pestanas: [Pestana, string, number][] = [['incidencias', 'Incidencias', d.incidencias.length], ['evaluaciones', 'Evaluaciones', d.historial.length], ['controles', 'Controles', d.controles.length], ['planes', 'Planes', d.planes.length], ['dictamenes', 'Dictámenes', d.dictamenes.length], ['eventos', 'Eventos', d.eventos.length]]
+  const pestanas: [Pestana, string, number][] = [['incidencias', 'Incidencias', d.incidencias.length], ['evaluaciones', 'Evaluaciones', d.historial.length], ['controles', 'Controles', d.controles.length], ['planes', 'Planes', d.planes.length], ['eventos', 'Eventos', d.eventos.length]]
   return <div className="stack">
     <PageHeader back={{ label: 'Volver al inicio', onClick: () => navigate('dashboard') }} eyebrow="Historial y actuaciones" title="Seguimiento"
       description={<>{d.u.nombre_recipiente} · <Badge estado={d.vigencia.estado} /></>}
@@ -89,17 +90,16 @@ function Detalle({ id }: { id: string }) {
       <div className={`panel${abiertas ? ' metric-card warn' : ''}`}><div><span>Incidencias abiertas</span><strong style={{ fontSize: 16 }}>{abiertas}</strong></div></div>
     </div>
     <ErrorMessage error={error || data.error} />{message && <p className="message ok" role="status">{message}</p>}
-    <div className="actions" role="group" aria-label="Registrar una actuación">{[['controles','Registrar control'],['eventos','Registrar evento'],['planes','Plan de monitoreo'],...(tecnico ? [['dictamenes','Dictamen técnico'],['revisiones','Revisar incidencia'],['resoluciones','Resolver incidencia']] : []),['admisiones','Registrar admisión']].map(([k,label]) => <button key={k} className={`btn-sm${action === k ? ' primary' : ''}`} aria-pressed={action === k} onClick={() => setAction(action === k ? '' : k)}>{label}</button>)}</div>
+    <div className="actions" role="group" aria-label="Registrar una actuación">{[['controles','Registrar control'],['eventos','Registrar evento'],['planes','Plan de monitoreo'],...(tecnico ? [['revisiones','Revisar incidencia'],['resoluciones','Resolver incidencia']] : []),['admisiones','Registrar admisión']].map(([k,label]) => <button key={k} className={`btn-sm${action === k ? ' primary' : ''}`} aria-pressed={action === k} onClick={() => setAction(action === k ? '' : k)}>{label}</button>)}</div>
     {action && <Panel title={nombre(action)}><form className="stack compact" style={{ marginTop: 0 }} onSubmit={e => void submit(e)}><div className="form-grid" style={{ marginTop: 0 }}>
       {action === 'controles' && <Field label="Tipo de control"><select value={form.tipoControl} onChange={e => set('tipoControl',e.target.value)}>{opciones(['INGRESO','GRANO','EXTERIOR','ALMACEN'])}</select></Field>}
       {action === 'eventos' && <Field label="Tipo de evento"><select value={form.tipoEvento} onChange={e => set('tipoEvento',e.target.value)}>{opciones(['LIMPIEZA_GENERAL','APERTURA','RESELLADO','SECADO','ENFRIAMIENTO','EXPOSICION_AGUA','CARGA_DESCARGA'])}</select></Field>}
       {['controles','eventos'].includes(action) && <Field label="Fecha de la actuación"><input required type="datetime-local" value={form.fecha} onChange={e => set('fecha', e.target.value)} /></Field>}
       {['controles','eventos','dictamenes','revisiones','resoluciones'].includes(action) && <Field label="Evidencia de la actuación"><textarea required value={form.evidencia} onChange={e => set('evidencia',e.target.value)} /></Field>}
       {action === 'planes' && <><Field label="Fecha del próximo control"><input required type="datetime-local" value={form.proximo} onChange={e => set('proximo',e.target.value)} /></Field><Field label="Fecha de salida prevista"><input required type="datetime-local" value={form.salida} onChange={e => set('salida',e.target.value)} /></Field><Field label="Intervalo entre controles (días)"><input required type="number" min="1" max="365" value={form.intervalo} onChange={e => set('intervalo',e.target.value)} /></Field><Field label="Actividades de monitoreo"><textarea required value={form.actividades} onChange={e => set('actividades',e.target.value)} /></Field></>}
-      {action === 'dictamenes' && <>{(['humedadMin','humedadMax','plazo','vence','condiciones'] as const).map((k,i) => <Field key={k} label={['Humedad mínima (%)','Humedad máxima (%)','Plazo máximo (días)','Vencimiento del dictamen','Condiciones del dictamen'][i]}><input required type={k === 'vence' ? 'datetime-local' : 'text'} inputMode={k === 'humedadMin' || k === 'humedadMax' || k === 'plazo' ? 'decimal' : undefined} value={form[k]} onChange={e => set(k,e.target.value)} /></Field>)}</>}
       {['revisiones','resoluciones'].includes(action) && <><Field label="Incidencia abierta"><select required value={form.incidencia} onChange={e => set('incidencia', e.target.value)}><option value="">Seleccionar</option>{d.incidencias.filter(i => i.estado === 'ABIERTA').map(i => <option key={i.id} value={i.id}>{nombre(i.tipo)} · {fecha(i.creada_en)}</option>)}</select></Field>{action === 'revisiones' ? <Field label="Resultado de la revisión"><select value={form.resultado} onChange={e => set('resultado',e.target.value)}>{opciones(['PENDIENTE','CONFIRMADA','DESCARTADA'])}</select></Field> : <Field label="Disposición y fundamento del cierre"><textarea required value={form.disposicion} onChange={e => set('disposicion',e.target.value)} /></Field>}</>}
       {action === 'admisiones' && <><Field label="Tipo de admisión" hint="El servidor comprobará nuevamente la vigencia antes de registrar la admisión."><select value={form.tipoAdmision} onChange={e => set('tipoAdmision',e.target.value)}>{opciones(['INGRESO','CONTINUIDAD'])}</select></Field>{d.vigencia.estado !== 'VIGENTE' && <p className="message" style={{ margin: 0 }}>La admisión requiere una autorización vigente.</p>}</>}
-    </div>{action === 'controles' && <><p className="muted">Registra los campos inspeccionados. El servidor identifica si el control está completo. En hermético usa el control exterior sin abrir rutinariamente.</p><Captura datos={datos} onChange={setDatos} /></>}
+    </div>{action === 'controles' && <><p className="muted">Registra los campos inspeccionados. El control registra observaciones; la recomendación se obtiene al reevaluar con la matriz. En hermético, usa el control exterior sin abrir rutinariamente.</p><Captura datos={datos} onChange={setDatos} filtro={form.tipoControl === 'ALMACEN' ? ['hr_almacen'] : form.tipoControl === 'EXTERIOR' ? [] : ['humedad_grano','temperatura_grano', ...(d.u.tipo_almacenamiento === 'HERMETICO' ? [] : ['hr_almacen'])]} />{form.tipoControl !== 'ALMACEN' && <InspeccionMatricial datos={datos} historicos={{}} onChange={setDatos} hermetico={d.u.tipo_almacenamiento === 'HERMETICO'} />}</>}
     <div className="actions"><button className="primary" disabled={busy || (action === 'admisiones' && d.vigencia.estado !== 'VIGENTE')}>{busy ? 'Guardando…' : 'Guardar actuación'}</button><button type="button" onClick={() => setAction('')}>Cancelar</button></div></form></Panel>}
 
     <section className="panel" style={{ padding: 0 }}>
@@ -114,7 +114,6 @@ function Detalle({ id }: { id: string }) {
         </li>)}</ol> : <Empty>No hay evaluaciones registradas.</Empty>)}
         {activa === 'controles' && (d.controles.length ? d.controles.map(c => <div className="row" key={c.id}><div><strong>{nombre(c.tipo)} · {fecha(c.fecha)}</strong><small>{c.completo ? 'Completo' : `Parcial: ${c.campos_pendientes.map(nombre).join(', ')}`}</small></div><p className="muted" style={{ margin: 0 }}>{c.evidencia}</p></div>) : <Empty>No hay controles.</Empty>)}
         {activa === 'planes' && (d.planes.length ? d.planes.map(p => <div className="row" key={p.id}><div><strong>{p.actividades}</strong><small>Cada {p.intervalo_dias} días · control {fecha(p.fecha_proximo_control)}</small></div><Badge tono={p.vigente ? 'ok' : ''}>{p.vigente ? 'Activo' : 'Sustituido'}</Badge></div>) : <Empty>No hay planes.</Empty>)}
-        {activa === 'dictamenes' && (d.dictamenes.length ? d.dictamenes.map(x => <div className="row" key={x.id}><div><strong>{x.condiciones}</strong><small>{x.humedad_min}–{x.humedad_max} % · plazo {x.plazo_maximo_dias} días · vence {fecha(x.vence_en)}</small></div><Badge tono={x.vigente ? 'ok' : 'crit'}>{x.vigente ? 'Vigente' : 'Vencido'}</Badge></div>) : <Empty>No hay dictámenes.</Empty>)}
         {activa === 'eventos' && (d.eventos.length ? d.eventos.map(e => <div className="row" key={e.id}><div><strong>{nombre(e.tipo)}</strong><small>{fecha(e.fecha)}</small></div><p className="muted" style={{ margin: 0 }}>{e.evidencia}</p></div>) : <Empty>No hay eventos.</Empty>)}
       </div>
     </section>

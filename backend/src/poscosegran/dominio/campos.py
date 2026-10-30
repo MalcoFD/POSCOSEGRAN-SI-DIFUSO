@@ -37,6 +37,9 @@ def _f(paso: int, na: bool = False) -> Campo:
 
 
 CAMPOS: dict[str, Campo] = {
+    "estado_fisico_sanitario": _x(3),
+    "estado_barrera": _x(3),
+    "procedimiento_interno": _x(3),
     # Paso 1 — identificación y modalidad
     "clima_calido": _b(1),
     # Paso 2 — mediciones y procedimiento

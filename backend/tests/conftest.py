@@ -27,6 +27,49 @@ from poscosegran.db.modelos import Usuario, UsuarioRol
 import pytest
 
 
+@pytest.fixture(scope="session", autouse=True)
+def registrar_cobertura_http():
+    """Registra métodos, rutas y estados realmente ejercitados por la suite HTTP."""
+    if os.environ.get("POSCOSEGRAN_REGISTRAR_COBERTURA") != "1":
+        yield
+        return
+    import json
+    import re
+    from collections import Counter
+    from urllib.parse import urlsplit
+
+    raiz = Path(__file__).parents[2]
+    contrato = json.loads((raiz / "docs/openapi.json").read_text(encoding="utf-8"))
+    rutas = [(metodo.upper(), ruta, re.compile("^" + re.sub(r"\{[^}]+\}", "[^/]+", ruta) + "$"))
+             for ruta, metodos in contrato["paths"].items()
+             for metodo in metodos if metodo.lower() in {"get", "post", "put", "patch", "delete"}]
+    if not any(ruta == "/auth/local/sesion" for _, ruta, _ in rutas):
+        rutas.append(("POST", "/auth/local/sesion", re.compile("^/auth/local/sesion$")))
+    llamadas = Counter()
+    original = TestClient.request
+
+    def observar(self, method, url, *args, **kwargs):
+        respuesta = original(self, method, url, *args, **kwargs)
+        path = urlsplit(str(respuesta.request.url)).path
+        for verbo, ruta, patron in rutas:
+            if verbo == method.upper() and patron.fullmatch(path):
+                llamadas[(verbo, ruta, respuesta.status_code)] += 1
+                break
+        return respuesta
+
+    TestClient.request = observar
+    yield
+    TestClient.request = original
+    salida = []
+    for verbo, ruta, _ in rutas:
+        estados = {str(estado): cantidad for (v, p, estado), cantidad in llamadas.items() if v == verbo and p == ruta}
+        salida.append({"metodo": verbo, "ruta": ruta, "estados": estados,
+                       "exito_verificado": any(200 <= int(s) < 300 for s in estados)})
+    destino = raiz / "test-results/cobertura-endpoints.json"
+    destino.parent.mkdir(exist_ok=True)
+    destino.write_text(json.dumps(salida, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def _exige_bd() -> bool:
     return os.environ.get("POSCOSEGRAN_EXIGIR_BD", "").strip().lower() in {"1", "true", "si", "yes"}
 

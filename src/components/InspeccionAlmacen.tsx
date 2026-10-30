@@ -15,7 +15,8 @@ export default function InspeccionAlmacen({id,revision}: {id:string;revision:num
     setError(null);setBusy(true)
     try {
       await write(`/almacenes/${id}/inspecciones`,{revision_almacen:revision,fecha:new Date().toISOString(),vigente_hasta:new Date(hasta).toISOString(),evidencia,observaciones:convertir(datos)})
-      setEditar(false);setDatos({});await qc.invalidateQueries()
+      setEditar(false);setDatos({})
+      await Promise.all([['inspeccion',id],['almacenes-lotes'],['unidades'],['inicio'],['vigencia']].map(queryKey=>qc.invalidateQueries({queryKey})))
     } catch(e){setError(e)} finally {setBusy(false)}
   }
   return <div className="stack">

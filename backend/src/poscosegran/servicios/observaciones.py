@@ -133,6 +133,7 @@ def a_dato(fila: ObservacionBD) -> Dato:
         procedencia=Procedencia(fila.procedencia),
         no_aplica=fila.aplicabilidad == "NO_APLICA",
         motivo_no_aplica=fila.motivo_no_aplica,
+        evidencia=fila.evidencia,
     )
 
 

@@ -23,7 +23,7 @@ import copy
 import json
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -100,14 +100,6 @@ def cargar_casos_referencia(ruta: Path | None = None) -> list[tuple[str, str, In
 # --- Propuesta --------------------------------------------------------------------------
 
 
-def _decimal(valor: Any) -> Decimal | None:
-    try:
-        numero = Decimal(str(valor))
-    except (InvalidOperation, ValueError):
-        return None
-    return numero if numero.is_finite() else None
-
-
 def proponer(
     activa: BaseConocimiento,
     *,
@@ -119,115 +111,98 @@ def proponer(
     casos: Iterable[tuple[str, str, Instantanea]] | None = None,
     difuso: Mapping[str, Any] | None = None,
 ) -> Propuesta:
-    """Construye, valida y mide una propuesta a partir de la versión activa.
-
-    `reglas` asocia el id de una regla de producción con su nueva definición
-    completa; None la retira. Un id nuevo la añade al final de su etapa.
-    """
+    """Valida matrices completas y mide el efecto de una nueva versión."""
     errores: list[str] = []
-    advertencias: list[str] = []
-    parametros = dict(parametros or {})
-    reglas = dict(reglas or {})
-
-    if len(motivo.strip()) < LONGITUD_MINIMA_MOTIVO:
-        errores.append(f"el motivo debe explicar el cambio (mínimo {LONGITUD_MINIMA_MOTIVO} caracteres)")
-
+    avisos: list[str] = []
     contenido = copy.deepcopy(dict(activa.contenido))
-    operativa = contenido["operativa"]
-    cambio_difuso = difuso is not None and difuso != operativa.get('difuso')
-    if cambio_difuso:
-        operativa['difuso'] = copy.deepcopy(dict(difuso or {}))
-        advertencias.append('Se modifican pertenencias o política Mamdani: revisar fronteras, cobertura e impacto antes de activar.')
-
-    cambios_parametros: list[CambioParametro] = []
-    for nombre, valor in parametros.items():
-        if nombre not in operativa["parametros"]:
-            errores.append(f"parámetro desconocido: {nombre}")
-            continue
-        nuevo = _decimal(valor)
-        if nuevo is None:
-            errores.append(f"parámetro {nombre}: '{valor}' no es un número")
-            continue
-        anterior = activa.parametro(nombre)
-        if nuevo == anterior:
-            continue
-        operativa["parametros"][nombre]["valor"] = float(nuevo) if nuevo != nuevo.to_integral() else int(nuevo)
-        cambios_parametros.append(
-            CambioParametro(nombre, anterior, nuevo, activa.parametros[nombre].unidad)
-        )
-
-    cambios_reglas: list[CambioRegla] = []
-    por_id = {r["id"]: i for i, r in enumerate(operativa["reglas"])}
-    for ident, definicion in reglas.items():
-        if definicion is None:
-            if ident not in por_id:
-                errores.append(f"no existe la regla {ident} que se quiere retirar")
-                continue
-            retirada = operativa["reglas"][por_id[ident]]
-            cambios_reglas.append(CambioRegla(ident, retirada.get("regla", ident), "RETIRADA"))
-            continue
-        if not isinstance(definicion, Mapping):
-            errores.append(f"regla {ident}: la definición debe ser un objeto")
-            continue
-        nueva = {**definicion, "id": ident}
-        if ident in por_id:
-            if nueva == operativa["reglas"][por_id[ident]]:
-                continue
-            operativa["reglas"][por_id[ident]] = nueva
-            cambios_reglas.append(CambioRegla(ident, nueva.get("regla", ident), "MODIFICADA"))
-        else:
-            operativa["reglas"].append(nueva)
-            cambios_reglas.append(CambioRegla(ident, nueva.get("regla", ident), "NUEVA"))
-    retiradas = {c.produccion for c in cambios_reglas if c.tipo == "RETIRADA"}
-    operativa["reglas"] = [r for r in operativa["reglas"] if r["id"] not in retiradas]
-
-    if not cambios_parametros and not cambios_reglas and not cambio_difuso:
-        errores.append("la propuesta no cambia nada respecto de la versión activa")
-
-    if (cambios_reglas or cambio_difuso) and not version_base:
-        errores.append("un cambio de reglas exige una nueva versión de la base")
-    nueva_version_base = version_base or activa.version_base
-    nueva_version_parametros = version_parametros or activa.version_parametros
-    if (nueva_version_base, nueva_version_parametros) == (activa.version_base, activa.version_parametros):
-        errores.append("la propuesta necesita un número de versión distinto del activo")
-    operativa["version_base"] = nueva_version_base
-    operativa["version_parametros"] = nueva_version_parametros
-
-    base: BaseConocimiento | None = None
+    op = contenido["operativa"]
+    if len(motivo.strip()) < LONGITUD_MINIMA_MOTIVO:
+        errores.append("El motivo técnico necesita al menos quince caracteres.")
+    if parametros:
+        errores.append("Los vértices y la política se editan dentro del modelo matricial completo.")
+    cambios: list[CambioRegla] = []
+    modelo = copy.deepcopy(dict(difuso)) if difuso is not None else op["difuso"]
+    for ident, definicion in (reglas or {}).items():
+        encontrado = False
+        for matriz in modelo.get("matrices", {}).values():
+            for i, regla in enumerate(matriz["reglas"]):
+                if regla["id"] == ident:
+                    encontrado = True
+                    if definicion is None:
+                        matriz["reglas"].pop(i)
+                    else:
+                        matriz["reglas"][i] = {**dict(definicion), "id": ident}
+                    cambios.append(
+                        CambioRegla(
+                            ident, ident, "RETIRADA" if definicion is None else "MODIFICADA"
+                        )
+                    )
+                    break
+        if not encontrado:
+            errores.append(
+                f"Regla inexistente: {ident}. Las matrices conservan sus antecedentes completos."
+            )
+    if modelo == op["difuso"]:
+        errores.append("La propuesta no cambia el modelo activo.")
+    nueva_base, nuevos_parametros = (
+        version_base or activa.version_base,
+        version_parametros or activa.version_parametros,
+    )
+    if nueva_base == activa.version_base:
+        errores.append("Un cambio del modelo requiere una nueva versión de base.")
+    op["difuso"] = modelo
+    op["version_base"], op["version_parametros"] = nueva_base, nuevos_parametros
+    doc = contenido["documental"]
+    doc["version_base"], doc["version_parametros"] = nueva_base, nuevos_parametros
+    # La descripción publicada se deriva de las mismas reglas propuestas.
+    anteriores = {r["id"]: r for r in doc["reglas"]}
+    nuevas = []
+    try:
+        for matriz in modelo["matrices"].values():
+            for r in matriz["reglas"]:
+                anterior = anteriores.get(r["id"])
+                if anterior is None:
+                    errores.append("Identificador no publicado en las matrices activas.")
+                    continue
+                ficha = copy.deepcopy(anterior)
+                ficha["antecedente"] = " Y ".join(
+                    f"{modelo['entradas'][h['entrada']]['nombre']} ES {h['conjunto']}"
+                    for h in r["si"]["todos"]
+                )
+                ficha["consecuente"] = r["entonces"]
+                ficha["accion"] = next(
+                    c["recomendacion"]
+                    for c in modelo["clasificacion"]
+                    if c["conjunto"] == r["entonces"]
+                )
+                nuevas.append(ficha)
+        doc["reglas"] = nuevas
+    except (KeyError, TypeError, StopIteration) as error:
+        errores.append(f"Propuesta matricial inválida: {error}")
+    base = None
     try:
         base = desde_contenido(contenido)
     except BaseInvalida as error:
         errores.extend(error.errores)
-
     impacto = None
-    if base is not None:
-        impacto = medir_impacto(activa, base, casos if casos is not None else cargar_casos_referencia())
+    if base is not None and not errores:
+        impacto = medir_impacto(
+            activa, base, casos if casos is not None else cargar_casos_referencia()
+        )
+        avisos.append("Revisar cobertura, superficie continua y fuentes antes de activar.")
         if impacto.nuevas_autorizaciones:
-            advertencias.append(
-                f"{impacto.nuevas_autorizaciones} casos que hoy no se autorizan pasarían a autorizarse: "
-                "revise que el cambio tiene fundamento técnico antes de activarlo"
+            avisos.append(
+                f"{impacto.nuevas_autorizaciones} casos pasarían a una recomendación favorable: requieren revisión."
             )
-        if any(c.tipo == "RETIRADA" for c in cambios_reglas):
-            advertencias.append("se retira una regla de producción: revise que el catálogo sigue siendo completo")
-        cambiados_publicados = [
-            c.nombre for c in cambios_parametros if activa.parametros[c.nombre].fundamento == "PUBLICADO"
-        ]
-        if cambiados_publicados:
-            advertencias.append(
-                "se modifican umbrales publicados en una fuente: "
-                + ", ".join(cambiados_publicados)
-                + ". Actualice su fundamento o fuente."
-            )
-
     return Propuesta(
         valida=not errores,
         errores=tuple(errores),
-        advertencias=tuple(advertencias),
-        version_base=nueva_version_base,
-        version_parametros=nueva_version_parametros,
+        advertencias=tuple(avisos),
+        version_base=nueva_base,
+        version_parametros=nuevos_parametros,
         motivo=motivo.strip(),
-        cambios_parametros=tuple(cambios_parametros),
-        cambios_reglas=tuple(cambios_reglas),
+        cambios_parametros=(),
+        cambios_reglas=tuple(cambios),
         impacto=impacto,
         contenido=contenido if not errores else None,
         base=base if not errores else None,
@@ -241,6 +216,7 @@ def medir_impacto(
 ) -> Impacto:
     """Evalúa cada caso con ambas versiones y recoge los que cambian de decisión."""
     from ..dominio.motor import evaluar
+
     autorizadas = activa.decisiones_autorizadas
     afectados: list[CasoAfectado] = []
     transiciones: dict[str, int] = {}

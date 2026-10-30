@@ -89,6 +89,7 @@ class Dato:
     procedencia: Procedencia = Procedencia.ACTUAL
     no_aplica: bool = False
     motivo_no_aplica: str | None = None
+    evidencia: str | None = None
 
     @property
     def utilizable(self) -> bool:

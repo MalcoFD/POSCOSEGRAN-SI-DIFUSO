@@ -62,7 +62,10 @@ jobs:
         working-directory: backend
         env:
           POSCOSEGRAN_BD_URL_PRUEBAS: ${{ env.BD_MIGRACIONES }}
-        run: pytest -q -rs
+          POSCOSEGRAN_REGISTRAR_COBERTURA: '1'
+        run: |
+          pytest -q -rs
+          python -c "import json,pathlib; rutas=json.loads(pathlib.Path('../test-results/cobertura-endpoints.json').read_text()); assert all(r['exito_verificado'] for r in rutas), rutas"
 
       - name: Privilegios de la credencial restringida
         working-directory: backend

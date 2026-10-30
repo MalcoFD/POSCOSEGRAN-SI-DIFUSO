@@ -67,7 +67,7 @@ class Fuente(Base):
 
 
 class Regla(Base):
-    """Ficha documental de cada regla R01–R52 de una versión."""
+    """Ficha documental de una regla de la versión publicada."""
 
     __tablename__ = "regla"
 

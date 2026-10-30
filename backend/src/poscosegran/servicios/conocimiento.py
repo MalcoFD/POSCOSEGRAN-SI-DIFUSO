@@ -16,7 +16,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from ..db.modelos import Fuente, Regla, VersionConocimiento
-from ..inferencia.base_conocimiento import BaseConocimiento, desde_contenido
+from ..inferencia.base_conocimiento import BaseConocimiento, BaseInvalida, desde_contenido
 from ..sistema_difuso.motor import VERSION_MOTOR
 
 _bases: dict[uuid.UUID, BaseConocimiento] = {}
@@ -51,7 +51,17 @@ def base_de(version: VersionConocimiento) -> BaseConocimiento:
             "base se guardara como datos: vuelva a cargarla con python -m poscosegran.conocimiento.cargar --activar",
         )
     if version.id not in _bases:
-        _bases[version.id] = desde_contenido(version.contenido)
+        modelo = version.contenido.get('operativa', {}).get('difuso', {})
+        if modelo.get('estructura') != 'MATRICIAL_DIRECTA':
+            raise HTTPException(
+                409,
+                'Esta versión histórica utiliza otro modelo. Sus evaluaciones permanecen '
+                'guardadas; el motor matricial no las recalcula ni modifica.',
+            )
+        try:
+            _bases[version.id] = desde_contenido(version.contenido)
+        except BaseInvalida as error:
+            raise HTTPException(503, 'La versión publicada no supera la validación matricial.') from error
     return _bases[version.id]
 
 

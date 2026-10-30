@@ -41,7 +41,7 @@ class ReglaCatalogo(BaseModel):
 
 
 class Catalogo(BaseModel):
-    """R01–R52 completas y las fuentes que las respaldan."""
+    """Las 320 reglas matriciales completas y sus referencias."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -54,12 +54,12 @@ class Catalogo(BaseModel):
     @model_validator(mode="after")
     def _completitud(self) -> "Catalogo":
         codigos = [regla.id for regla in self.reglas]
-        esperados = [f"R{numero:02d}" for numero in range(1, 53)]
+        esperados = [f"NH{numero:03d}" for numero in range(1, 257)] + [f"H{numero:03d}" for numero in range(1, 65)]
         if codigos != esperados:
             faltan = sorted(set(esperados) - set(codigos))
             sobran = sorted(set(codigos) - set(esperados))
             raise ValueError(
-                f"las reglas deben ser R01…R52 en orden consecutivo. "
+                f"las reglas deben ser NH001…NH256 y H001…H064 en orden. "
                 f"Faltan: {faltan or 'ninguna'}. No reconocidas: {sobran or 'ninguna'}"
             )
 

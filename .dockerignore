@@ -7,6 +7,9 @@
 .tmp-*
 dist
 test-results
+tmp
+docs
+**/*.egg-info
 playwright-report
 **/*.log
 **/tests

@@ -50,7 +50,9 @@ docs/superpowers
 /.vscode/
 /tmp/
 /backend/README.md
+# Solo estos tres documentos se publican en el repositorio.
+# Los informes, guías, evidencias y lecturas permanecen en el equipo local.
 /docs/*
 !/docs/openapi.json
-/knowledge/*.md
-*.docx
+!/docs/RESUMEN_CAMBIOS_MAMDANI_320.md
+!/docs/REGLAS_ACTUALES.md

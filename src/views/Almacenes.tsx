@@ -55,7 +55,7 @@ export default function Almacenes() {
 
     {almacen && <Panel title={`Detalle · ${almacen.nombre}`}><InspeccionAlmacen key={almacen.id} id={almacen.id} revision={almacen.revision}/>
       <p>{almacen.ubicacion} · registrado {fecha(almacen.creado_en)}</p>
-      <p>Clima cálido: {almacen.clima_calido === null ? 'no se sabe (la banda condicional de humedad queda pendiente)' : almacen.clima_calido ? 'sí' : 'no'}{almacen.fundamento_clima ? ` · Fundamento: ${almacen.fundamento_clima}` : ''}</p>
+      <p>Clima cálido declarado: {almacen.clima_calido === null ? 'sin clasificar' : almacen.clima_calido ? 'sí' : 'no'}{almacen.fundamento_clima ? ` · Fundamento: ${almacen.fundamento_clima}` : ''}. Es contexto del almacén; el cálculo utiliza las mediciones de la matriz.</p>
       {d.unidades.filter(u => u.id_almacen === almacen.id).map(u => <div className="row" key={u.id}><span><strong>{u.nombre_recipiente}</strong><small>Lote {d.lotes.find(l => l.id === u.id_lote)?.codigo} · {u.tipo_almacenamiento ? nombre(u.tipo_almacenamiento) : 'Modalidad sin definir'}</small></span>{vigenciaBadge(u.id)}</div>)}
     </Panel>}
 

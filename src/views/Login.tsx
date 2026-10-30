@@ -1,5 +1,5 @@
 import { useId, useState } from 'react'
-import { baseUrl, localAuth, supabase, NOTA_PROTOTIPO } from '../api/client'
+import { baseUrl, localAuth, supabase } from '../api/client'
 import { ErrorMessage, Field } from '../components/Shared'
 import { IconEye, IconEyeOff, IconLoader, IconPin } from '../components/Icons'
 
@@ -37,9 +37,9 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
         <p>Evalúa tus unidades de almacenamiento con un sistema difuso Mamdani y conserva un seguimiento explicable de cada decisión.</p>
       </div>
       <div className="login-stats">
-        <div><strong>23</strong><span>reglas difusas</span></div>
-        <div><strong>7</strong><span>decisiones posibles</span></div>
-        <div><strong>52</strong><span>reglas documentales</span></div>
+        <div><strong>320</strong><span>reglas difusas</span></div>
+        <div><strong>5</strong><span>recomendaciones</span></div>
+        <div><strong>2</strong><span>modalidades</span></div>
       </div>
     </section>
     <div className="login-form">
@@ -59,7 +59,6 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
         </div>
         <ErrorMessage error={error} />
         <button className="primary" disabled={busy} style={{ minHeight: 48 }}>{busy ? <><IconLoader size={16} className="spin" />Ingresando…</> : 'Entrar'}</button>
-        <p className="nota-prototipo" style={{ margin: 0 }}>{NOTA_PROTOTIPO}</p>
       </form>
     </div>
   </div>

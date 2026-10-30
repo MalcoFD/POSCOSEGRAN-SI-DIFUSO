@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { list, request, write, nombre, fecha, fechaRelativa, NOTA_PROTOTIPO, type Schema, type Unidad } from '../api/client'
+import { list, request, write, nombre, fecha, fechaRelativa, type Schema, type Unidad } from '../api/client'
 import Panel, { Badge, Empty, ErrorMessage, Field, PageHeader, Skeleton, SkeletonPage } from '../components/Shared'
 import { useToast } from '../components/Toast'
 import { IconCalendar, IconCheck, IconPackage, IconPlus, IconShieldAlert, IconWrench, IconX } from '../components/Icons'
@@ -52,7 +52,6 @@ export default function Dashboard() {
   return <div className="stack">
     <PageHeader eyebrow="Control del almacenamiento" title="Inicio" description="Tus unidades, sus condiciones y el próximo paso."
       actions={<button className="primary" onClick={() => setShow(!show)} aria-expanded={show}>{show ? <><IconX size={16} strokeWidth={2.4} />Cerrar registro</> : <><IconPlus size={16} strokeWidth={2.4} />Registrar unidad</>}</button>} />
-    <p className="nota-prototipo" style={{ margin: 0 }}>{NOTA_PROTOTIPO}</p>
     <div className="metrics">
       <div className="panel metric-card"><div className="metric-icon"><IconPackage size={22} /></div><div><span>Unidades registradas</span><strong>{d.inicio.unidades_total}</strong></div></div>
       <div className={`panel metric-card${d.inicio.cuarentenas_abiertas ? ' crit' : ''}`}><div className={`metric-icon${d.inicio.cuarentenas_abiertas ? ' crit' : ''}`}><IconShieldAlert size={22} /></div><div><span>Cuarentenas abiertas</span><strong>{d.inicio.cuarentenas_abiertas}</strong></div></div>

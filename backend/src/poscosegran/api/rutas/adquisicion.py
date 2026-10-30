@@ -163,7 +163,7 @@ def detalle(id_version: uuid.UUID, sesion: SesionDep, identidad: IdentidadDep) -
     return api.DetalleVersion(
         version=_resumen(version),
         parametros=_parametros(base),
-        reglas=list(version.contenido["operativa"]["reglas"]),  # type: ignore[index]
+        reglas=[r for m in version.contenido['operativa']['difuso']['matrices'].values() for r in m['reglas']],  # type: ignore[index]
         cambios_respecto_origen=cambios,
         difuso=base.contenido['operativa'].get('difuso'),
     )
