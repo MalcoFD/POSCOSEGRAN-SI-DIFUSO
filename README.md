@@ -13,7 +13,7 @@ Las mediciones continuas tienen cuatro etiquetas solapadas. La inspección es ca
 
 El flujo es captura → validación → fuzzificación → matriz → mínimo de antecedentes → recorte mínimo → agregación máxima → centroide exacto → interpretación e historial. La salida es un índice de intervención y una de cinco recomendaciones. Los datos pendientes se guardan sin índice. Las fechas, permisos, revisiones y la vigencia son controles de la aplicación, no otra base de recomendaciones.
 
-## Desarrollo local
+## Desarrollo local 
 
 Requiere Python 3.13, Node.js 22, pnpm y Docker Desktop iniciado. Reutilice los entornos existentes.
 
